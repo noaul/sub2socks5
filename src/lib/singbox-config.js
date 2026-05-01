@@ -94,7 +94,7 @@ export function buildSingBoxConfig(appConfig, subscriptionState) {
       auto_detect_interface: appConfig.routing.autoDetectInterface,
       final: appConfig.routing.routeFinal,
       default_domain_resolver: {
-        server: appConfig.dns.final || 'dns-remote',
+        server: appConfig.dns.defaultDomainResolver || 'dns-bootstrap',
         strategy: appConfig.dns.strategy
       },
       rules: routeRules,
@@ -243,11 +243,12 @@ function normalizeGroups(groups, nodes) {
 }
 
 function buildDnsServers(dnsConfig) {
-  const remoteUrl = dnsConfig.remoteUrl || 'https://1.1.1.1/dns-query';
+  const remoteUrl = dnsConfig.remoteUrl || 'https://cloudflare-dns.com/dns-query';
   const bootstrapServer = dnsConfig.bootstrapServer || '223.5.5.5';
   const remote = buildHttpsDnsServer(remoteUrl, bootstrapServer);
+  const bootstrap = buildBootstrapDnsServer(bootstrapServer);
   const direct = { tag: 'dns-direct', type: 'local' };
-  return [remote, direct];
+  return [remote, bootstrap, direct].filter(Boolean);
 }
 
 function buildDnsRules(dnsConfig) {
@@ -270,10 +271,22 @@ function buildHttpsDnsServer(remoteUrl, bootstrapServer) {
     path: url.pathname || '/dns-query',
     detour: 'proxy',
     domain_resolver: bootstrapServer ? {
-      server: 'dns-direct',
+      server: 'dns-bootstrap',
       strategy: 'prefer_ipv4'
     } : undefined
   });
+}
+
+function buildBootstrapDnsServer(bootstrapServer) {
+  if (!bootstrapServer) {
+    return null;
+  }
+  return {
+    tag: 'dns-bootstrap',
+    type: 'udp',
+    server: bootstrapServer,
+    server_port: 53
+  };
 }
 
 function decodeShadowsocksCredentials(value) {

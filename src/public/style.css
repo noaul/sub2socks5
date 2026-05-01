@@ -286,6 +286,31 @@ button:disabled {
   white-space: pre-wrap;
   word-break: break-word;
 }
+.member-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+.member-option,
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #2f467c;
+  border-radius: 8px;
+  background: #091120;
+}
+.member-row select {
+  flex: 1 1 auto;
+}
+.member-add {
+  width: fit-content;
+}
+.member-remove {
+  background: #de5b6d;
+}
 
 @media (max-width: 900px) {
   .field-with-action {

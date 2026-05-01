@@ -2,6 +2,7 @@ const statusEl = document.getElementById('node-status');
 const manualNodesEl = document.getElementById('manual-nodes');
 const groupsEl = document.getElementById('groups');
 const availableNodeListEl = document.getElementById('available-node-list');
+const NODES_UPDATED_KEY = 'sub2socks5:nodes-updated-at';
 
 let state = {
   subscriptionNodes: [],
@@ -61,10 +62,9 @@ function renderGroups() {
     return;
   }
 
-  const selectableNodes = state.availableOutbounds.filter((item) => item.tag !== 'proxy' && item.tag !== 'auto' && item.tag !== 'block');
+  const selectableNodes = getSelectableNodes();
 
   for (const [index, group] of state.groups.entries()) {
-    const members = new Set(group.members || []);
     const item = document.createElement('div');
     item.className = 'timeline-item';
     item.innerHTML = `
@@ -80,12 +80,7 @@ function renderGroups() {
         </label>
       </div>
       <div class="member-selector" data-group-members="${index}">
-        ${selectableNodes.map((node) => `
-          <label class="member-option">
-            <input type="checkbox" data-group-member="${index}" value="${escapeHtmlAttr(node.tag)}" ${members.has(node.tag) ? 'checked' : ''} />
-            <span>${escapeHtml(node.label || node.tag)}</span>
-          </label>
-        `).join('')}
+        ${renderGroupMembers(index, group, selectableNodes)}
       </div>
       <div class="section-heading-actions">
         <button type="button" data-remove-group="${index}">删除</button>
@@ -93,6 +88,38 @@ function renderGroups() {
     `;
     groupsEl.appendChild(item);
   }
+}
+
+function renderGroupMembers(index, group, selectableNodes) {
+  const selected = Array.isArray(group.members) ? group.members : [];
+  const rows = selected.map((memberTag, memberIndex) => {
+    const options = buildMemberOptions(selectableNodes, selected, memberTag);
+    return `
+      <div class="member-row">
+        <select data-group-member-select="${index}" data-member-index="${memberIndex}">
+          ${options}
+        </select>
+        <button type="button" class="member-remove" data-remove-member="${index}" data-member-index="${memberIndex}">删除</button>
+      </div>
+    `;
+  });
+
+  const remaining = selectableNodes.filter((node) => !selected.includes(node.tag));
+  rows.push(`
+    <button type="button" class="member-add" data-add-member="${index}" ${remaining.length ? '' : 'disabled'}>+ 添加节点</button>
+  `);
+  return rows.join('');
+}
+
+function buildMemberOptions(selectableNodes, selectedTags, currentTag) {
+  return selectableNodes
+    .filter((node) => node.tag === currentTag || !selectedTags.includes(node.tag))
+    .map((node) => `<option value="${escapeHtmlAttr(node.tag)}" ${node.tag === currentTag ? 'selected' : ''}>${escapeHtml(node.label || node.tag)}</option>`)
+    .join('');
+}
+
+function getSelectableNodes() {
+  return state.availableOutbounds.filter((item) => !['proxy', 'auto', 'block'].includes(item.tag));
 }
 
 function setStatus(message, kind = 'idle') {
@@ -141,6 +168,7 @@ document.getElementById('save-nodes').addEventListener('click', async () => {
     if (!response.ok) {
       throw new Error(data?.error?.message || '保存失败');
     }
+    localStorage.setItem(NODES_UPDATED_KEY, String(Date.now()));
     setStatus('节点配置已保存', 'success');
     await load();
   } catch (error) {
@@ -164,24 +192,43 @@ document.addEventListener('input', (event) => {
     state.groups[index][field] = target.value;
   }
 
-  if (target.dataset.groupMember) {
-    const index = Number(target.dataset.groupMember);
-    const members = new Set(state.groups[index].members || []);
-    if (target.checked) members.add(target.value);
-    else members.delete(target.value);
-    state.groups[index].members = [...members];
+  if (target.dataset.groupMemberSelect) {
+    const groupIndex = Number(target.dataset.groupMemberSelect);
+    const memberIndex = Number(target.dataset.memberIndex);
+    state.groups[groupIndex].members[memberIndex] = target.value;
+    renderGroups();
   }
 });
 
 document.addEventListener('click', (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
+
   if (target.dataset.removeManual) {
     state.manualNodes.splice(Number(target.dataset.removeManual), 1);
     renderManualNodes();
   }
+
   if (target.dataset.removeGroup) {
     state.groups.splice(Number(target.dataset.removeGroup), 1);
+    renderGroups();
+  }
+
+  if (target.dataset.addMember) {
+    const groupIndex = Number(target.dataset.addMember);
+    const selectableNodes = getSelectableNodes();
+    const selected = new Set(state.groups[groupIndex].members || []);
+    const nextNode = selectableNodes.find((node) => !selected.has(node.tag));
+    if (nextNode) {
+      state.groups[groupIndex].members.push(nextNode.tag);
+      renderGroups();
+    }
+  }
+
+  if (target.dataset.removeMember) {
+    const groupIndex = Number(target.dataset.removeMember);
+    const memberIndex = Number(target.dataset.memberIndex);
+    state.groups[groupIndex].members.splice(memberIndex, 1);
     renderGroups();
   }
 });

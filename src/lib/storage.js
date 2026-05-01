@@ -38,15 +38,21 @@ export const defaultConfig = {
   },
   dns: {
     strategy: 'prefer_ipv4',
-    remoteUrl: 'https://1.1.1.1/dns-query',
+    remoteUrl: 'https://cloudflare-dns.com/dns-query',
     bootstrapServer: '223.5.5.5',
     servers: [
       {
         tag: 'dns-remote',
         type: 'https',
-        server: '1.1.1.1',
+        server: 'cloudflare-dns.com',
         path: '/dns-query',
         detour: 'proxy'
+      },
+      {
+        tag: 'dns-bootstrap',
+        type: 'udp',
+        server: '223.5.5.5',
+        server_port: 53
       },
       {
         tag: 'dns-direct',
@@ -240,6 +246,9 @@ function migrateConfig(config) {
   }
   if (!config.dns.bootstrapServer) {
     config.dns.bootstrapServer = '223.5.5.5';
+  }
+  if (!config.dns.remoteUrl) {
+    config.dns.remoteUrl = 'https://cloudflare-dns.com/dns-query';
   }
   if (Array.isArray(config?.dns?.servers)) {
     config.dns.servers = config.dns.servers.map(migrateDnsServer).filter(Boolean);

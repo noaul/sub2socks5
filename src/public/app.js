@@ -23,6 +23,7 @@ const kernelVersionSelect = document.getElementById('kernel-version-select');
 const kernelSelectVersionButton = document.getElementById('kernel-select-version');
 const kernelArchSelect = document.getElementById('kernel-arch-select');
 const kernelCheckUpdatesButton = document.getElementById('kernel-check-updates');
+const NODES_UPDATED_KEY = 'sub2socks5:nodes-updated-at';
 
 const forms = {
   architecture: document.getElementById('architecture-form'),
@@ -63,6 +64,7 @@ const infoViews = {
 let lastSavedConfigText = '';
 let currentView = 'form';
 let formTouched = false;
+let lastKnownNodesUpdatedAt = localStorage.getItem(NODES_UPDATED_KEY) || '';
 let latestData = {
   config: null,
   subscription: null,
@@ -199,6 +201,7 @@ function renderOutboundOptions() {
 }
 
 function renderSelectOptions(select, options, selected) {
+  const previous = select.value;
   select.innerHTML = '';
   for (const optionInfo of options) {
     const option = document.createElement('option');
@@ -206,6 +209,9 @@ function renderSelectOptions(select, options, selected) {
     option.textContent = optionInfo.label || optionInfo.tag;
     option.selected = optionInfo.tag === selected;
     select.appendChild(option);
+  }
+  if (!select.value && options.some((item) => item.tag === previous)) {
+    select.value = previous;
   }
   if (!select.value && options[0]) {
     select.value = options[0].tag;
@@ -265,7 +271,7 @@ function syncStatusBarWithDownload(downloadState = {}) {
   const message = progress.message || '正在下载';
   const percent = typeof progress.percent === 'number' ? `${progress.percent.toFixed(0)}%` : '处理中';
   const threads = progress.threads ? `，${progress.threads} 线程` : '';
-  setStatus(`下载内核中 [${stage}] ${message}（${percent}${threads}）`, 'loading');
+  setStatus(`下载内核中 [${stage}] ${message}，${percent}${threads}`, 'loading');
   return true;
 }
 
@@ -586,6 +592,15 @@ async function startDownloadFlow() {
   }
 }
 
+async function refreshAfterNodesUpdate() {
+  const current = localStorage.getItem(NODES_UPDATED_KEY) || '';
+  if (current && current !== lastKnownNodesUpdatedAt) {
+    lastKnownNodesUpdatedAt = current;
+    await load();
+    setStatus('节点列表已同步到主页', 'success');
+  }
+}
+
 document.getElementById('save-config').onclick = () => action('保存配置', async () => {
   const validation = currentView === 'json' ? parseJsonEditor() : parseFormConfig(true);
   if (!validation.ok) {
@@ -676,6 +691,12 @@ for (const element of Object.values(fields)) {
   });
 }
 
+window.addEventListener('storage', (event) => {
+  if (event.key === NODES_UPDATED_KEY) {
+    refreshAfterNodesUpdate().catch(() => {});
+  }
+});
+
 load()
   .then(() => {
     switchView('form');
@@ -687,7 +708,7 @@ load()
   .catch((error) => setStatus(`初始化失败：${error.message}`, 'error'));
 
 setInterval(() => {
-  load()
+  Promise.all([load(), refreshAfterNodesUpdate()])
     .then(() => {
       const downloading = syncStatusBarWithDownload(latestData.download);
       if (downloading) {

@@ -1,190 +1,306 @@
-﻿# sub2socks5
+# sub2socks5
 
-一个在当前目录下运行的 `sing-box` 配置管理器：
-- 从机场订阅拉取节点
-- 生成符合 `sing-box` 配置结构的 JSON
-- 用本地 `sing-box` 内核启动多个 socks5 入口端口
-- 通过 Web UI 编辑配置与查看运行状态
-- 通过 Web UI 自动识别系统架构并下载对应 `sing-box` release
-- 默认采用远程 DNS 出站与代理 detour，尽量降低 DNS 泄漏风险
+一个基于 `Node.js + sing-box` 的本地代理管理器，目标是把机场订阅转换成可视化、可管理、可多端口分流的 `SOCKS5` 代理服务。
 
-## 当前实现
+当前已经支持：
+- 拉取机场订阅并解析节点
+- 管理订阅节点、手动节点、节点组
+- 生成符合新版 `sing-box` 结构的配置
+- 启动本地 `sing-box` 内核提供 `SOCKS5` 服务
+- 通过 Web UI 管理配置、节点、内核、运行状态和日志
+- 自动检测系统架构并下载匹配的 `sing-box` 内核
+- 通过远程 DNS + 引导 DNS 的方式尽量降低 DNS 泄漏风险
 
-- 运行环境：Node.js 24+
-- 启动命令：`node src/server.js`
-- Web UI：`http://127.0.0.1:18080`
-- 默认 `sing-box` 二进制路径：`D:\sub2socks5\bin\sing-box.exe`
+## 当前成果
 
-## 当前架构
+- Web UI 运行在 `http://127.0.0.1:18080`
+- 已完成订阅解析，支持常见协议：
+  - `vmess`
+  - `vless`
+  - `trojan`
+  - `shadowsocks`
+  - `hysteria2`
+  - `tuic`
+- 已支持订阅内容为：
+  - 纯链接列表
+  - Base64 编码订阅
+  - URL Safe Base64 订阅
+- 已支持节点管理：
+  - 订阅节点展示
+  - 手动添加节点
+  - 手动添加节点组
+  - 节点组成员通过“`+ 添加节点` + 下拉框”方式选择
+  - 手动节点与节点组会持久化保存，不会被更新订阅覆盖
+- 已支持主页配置：
+  - `SOCKS5` 监听地址与端口
+  - 默认路由出口
+  - `SOCKS5` 目标出口
+  - DNS 设置
+  - 表单 / JSON 双视图切换
+- 已支持主页与节点页联动：
+  - 在节点管理页保存节点组后，主页下拉框会立即出现新的节点组出口
+- 已支持内核管理：
+  - 检测当前架构
+  - 获取版本列表
+  - 设置计划下载版本
+  - 拉取匹配架构的 `sing-box` 内核
+- 已修复 `sing-box` 近期版本配置兼容问题：
+  - 旧版 DNS 写法移除
+  - 旧版 inbound 字段移除
+  - 新版 DNS server / rule / route 结构适配
+- 已完成真实代理联通测试：
+  - `SOCKS5` 端口监听成功
+  - 通过代理访问 `https://www.google.com/generate_204` 成功返回 `204`
+  - 通过代理访问 `https://www.gstatic.com/generate_204` 成功返回 `204`
 
-当前项目采用“单进程管理器 + 本地 sing-box 内核 + 静态 Web UI”的结构。
+## 项目架构
 
-### 模块划分
+项目采用“`Node.js` 管理进程 + 本地 `sing-box` 内核 + 静态 Web UI”的结构。
+
+### 目录结构
+
+- `D:\sub2socks5\src`
+  - 源码目录
+- `D:\sub2socks5\src\lib`
+  - 后端核心逻辑
+- `D:\sub2socks5\src\public`
+  - Web UI 静态页面与前端脚本
+- `D:\sub2socks5\data`
+  - 持久化数据目录
+- `D:\sub2socks5\runtime`
+  - 运行时生成文件目录
+- `D:\sub2socks5\bin`
+  - `sing-box` 内核与版本信息目录
+
+### 核心模块
 
 - `D:\sub2socks5\src\server.js`
   - HTTP 服务入口
-  - 提供 Web UI 静态文件
-  - 提供配置、订阅、内核、运行时相关 API
+  - 提供 Web UI 页面
+  - 提供配置、订阅、节点、内核、运行时 API
+
 - `D:\sub2socks5\src\lib\storage.js`
   - 管理默认配置
-  - 管理 `data`、`runtime`、`bin` 目录
-  - 读写应用配置与生成后的 `sing-box` 配置
+  - 读写配置文件、订阅状态、架构信息、版本列表、计划内核信息
+  - 负责 `data / runtime / bin` 目录初始化
+
 - `D:\sub2socks5\src\lib\subscription.js`
-  - 拉取机场订阅
-  - 尝试 base64 解码订阅文本
-  - 解析 `vmess`、`vless`、`trojan`、`ss`、`hysteria2`、`tuic` 节点
+  - 拉取订阅
+  - 自动识别并解码 Base64 / URL Safe Base64
+  - 解析多种代理协议为统一节点结构
+
 - `D:\sub2socks5\src\lib\singbox-config.js`
-  - 将应用配置和订阅节点转换为 `sing-box` JSON 配置
-  - 生成 `inbounds`、`outbounds`、`dns`、`route`、`experimental`
+  - 将应用配置、订阅节点、手动节点、节点组转换为 `sing-box` 配置
+  - 生成 `dns / inbounds / outbounds / route / experimental`
+  - 负责 DNS 防泄漏策略生成
+
 - `D:\sub2socks5\src\lib\singbox-manager.js`
-  - 启动和停止本地 `sing-box` 进程
-  - 缓存运行日志与状态
+  - 启动、停止、跟踪 `sing-box` 进程
+  - 缓存运行状态与日志
+
 - `D:\sub2socks5\src\lib\singbox-release.js`
-  - 检测当前系统架构
-  - 查询 `SagerNet/sing-box` GitHub Releases 最新版本
-  - 下载、解压并安装对应平台二进制到 `bin`
-- `D:\sub2socks5\src\public\index.html`
-  - Web UI 页面结构
+  - 检测平台架构
+  - 读取 / 更新 GitHub Release 版本信息
+  - 下载并安装匹配架构的 `sing-box`
+
 - `D:\sub2socks5\src\public\app.js`
-  - 前端交互逻辑
-  - 调用后端 API 完成保存配置、刷新订阅、下载内核、启动服务等动作
-- `D:\sub2socks5\src\public\style.css`
-  - Web UI 样式
+  - 主页前端逻辑
+  - 管理配置编辑、版本检测、内核下载、运行控制、日志刷新、节点组联动
 
-### 目录职责
+- `D:\sub2socks5\src\public\nodes.js`
+  - 节点管理页前端逻辑
+  - 管理手动节点、节点组、成员选择
 
-- `D:\sub2socks5\data`
-  - 持久化应用主配置 `app-config.json`
-- `D:\sub2socks5\runtime`
-  - 保存生成的 `sing-box.json`
-- `D:\sub2socks5\bin`
-  - 保存自动下载或手动放入的 `sing-box` 内核
-  - 保存 `sing-box-version.json` 记录已安装 release 信息
+### 持久化文件
 
-### 运行时关系
-
-1. 用户在 Web UI 修改配置。
-2. 前端将配置提交到后端 API。
-3. 后端把配置保存到 `data\app-config.json`。
-4. 用户刷新订阅后，后端拉取订阅并解析出节点列表。
-5. 用户生成配置后，后端把当前配置和节点列表组合成 `runtime\sing-box.json`。
-6. 用户启动内核后，后端调用本地 `bin\sing-box.exe` 执行 `run -c runtime\sing-box.json`。
-7. `sing-box` 根据入站端口和路由规则对外提供多个 socks5 代理入口。
+- `D:\sub2socks5\data\app-config.json`
+  - 主配置文件
+- `D:\sub2socks5\data\subscription-state.json`
+  - 订阅解析结果
+- `D:\sub2socks5\data\architecture-info.json`
+  - 当前架构信息
+- `D:\sub2socks5\data\release-list.json`
+  - 固化版本列表
+- `D:\sub2socks5\data\planned-kernel-info.json`
+  - 计划下载的内核版本
+- `D:\sub2socks5\runtime\sing-box.json`
+  - 生成后的运行配置
+- `D:\sub2socks5\bin\sing-box.exe`
+  - 已安装的内核
+- `D:\sub2socks5\bin\sing-box-version.json`
+  - 已安装内核版本信息
 
 ## 工作流程
 
-### 首次使用流程
+### 首次使用
 
-1. 启动服务：`node src/server.js`
-2. 打开 Web UI：`http://127.0.0.1:18080`
-3. 点击 `检查内核版本` 查看当前架构和远端最新版本
-4. 点击 `拉取 sing-box 内核` 自动下载适配当前系统的内核
-5. 在配置编辑区填入订阅地址 `subscription.url`
-6. 点击 `保存配置`
-7. 点击 `刷新订阅`
-8. 检查节点列表是否成功解析
-9. 按需修改 `ports[]`，为不同端口指定不同 `target`
-10. 点击 `生成 sing-box 配置`
-11. 点击 `启动 sing-box`
+1. 启动服务：
+   - `node src/server.js`
+2. 打开主页：
+   - `http://127.0.0.1:18080`
+3. 点击 `检测当前架构`
+4. 选择或确认计划内核版本
+5. 点击 `拉取 sing-box 内核`
+6. 填写订阅地址
+7. 点击 `保存配置`
+8. 点击 `更新订阅`
+9. 检查节点是否解析成功
+10. 按需设置默认出口和 `SOCKS5` 目标出口
+11. 点击 `生成 sing-box 配置`
+12. 点击 `启动 sing-box`
 
-### 日常使用流程
+### 节点管理流程
 
-1. 修改订阅地址、端口映射、DNS 或路由规则
-2. 保存配置
-3. 刷新订阅
-4. 重新生成配置
-5. 重启 `sing-box` 使新配置生效
+1. 在主页点击 `节点管理`
+2. 可添加：
+   - 手动节点
+   - 节点组
+3. 节点组成员通过 `+ 添加节点` 逐项添加
+4. 点击 `保存节点配置`
+5. 保存后主页出口下拉框会自动刷新并显示新的节点组
 
-### 多端口 socks5 工作方式
+### 运行流程
 
-当前通过 `ports[]` 定义多个本地 socks5 入站，例如：
-- 端口 `1080` → `target: proxy`
-- 端口 `1081` → `target: auto`
-- 端口 `1082` → `target: 某个具体节点 tag`
+1. Web UI 保存配置到 `D:\sub2socks5\data\app-config.json`
+2. 后端拉取订阅并保存到 `D:\sub2socks5\data\subscription-state.json`
+3. 生成 `D:\sub2socks5\runtime\sing-box.json`
+4. 后端调用本地 `sing-box` 内核启动代理
+5. `sing-box` 在指定端口监听 `SOCKS5`
+6. 不同端口可绑定不同节点或节点组出口
 
-生成配置时：
-- 每个 `ports[]` 条目都会生成一个 `socks` 入站
-- 每个入站都会追加一条 `route.rules`，将该入站流量发往对应 `target`
-- `target` 可以是：
-  - `proxy`：手动选择器节点组
-  - `auto`：自动测速节点组
-  - 某个具体节点 tag：固定走单节点
-  - `direct`：直连
-  - `block`：拦截
+## 当前 DNS 方案
 
-## 内核自动拉取
+当前默认 DNS 逻辑是：
 
-Web UI 新增两个操作：
-- `检查内核版本`：读取本地已安装状态，并查询 GitHub Releases 最新版本
-- `拉取 sing-box 内核`：自动检测当前系统与架构，从 `SagerNet/sing-box` 的 Releases 下载对应压缩包并解压到 `D:\sub2socks5\bin`
+- 远程 DNS：
+  - `https://cloudflare-dns.com/dns-query`
+- 引导 DNS：
+  - `223.5.5.5:53`
+- 远程 DoH 使用代理出站
+- 默认域名解析器优先使用引导 DNS
 
-当前支持的架构映射：
-- Windows `x64` → `windows-amd64`
-- Windows `arm64` → `windows-arm64`
-- Linux `x64` → `linux-amd64`
-- Linux `arm64` → `linux-arm64`
-- macOS `x64` → `darwin-amd64`
-- macOS `arm64` → `darwin-arm64`
+这样做的原因：
+- 避免直接使用本地系统 DNS 造成泄漏
+- 避免部分节点环境下远程 DoH 首次解析超时
+- 保证代理连接建立前后的域名解析更稳定
 
-内核下载流程：
-1. 后端读取 `process.platform` 和 `process.arch`
-2. 映射为 sing-box release 资产命名规则
-3. 请求 GitHub Releases latest API
-4. 匹配当前平台对应压缩包
-5. 下载到临时目录
-6. 自动解压并提取 `sing-box` 可执行文件
-7. 移动到 `D:\sub2socks5\bin`
-8. 将 `app.app.singBoxBinary` 自动更新为下载后的路径
+## 当前默认出站逻辑
 
-## 配置说明
+生成配置后，默认可选出口包括：
 
-主配置文件会保存到：`D:\sub2socks5\data\app-config.json`
+- `proxy`
+  - 手动选择器，包含全部可用节点 / 节点组
+- `auto`
+  - 自动测速组
+- `direct`
+  - 直连
+- `block`
+  - 拦截
+- 订阅节点
+- 手动节点
+- 用户自定义节点组
 
-重点字段：
-- `subscription.url`：机场订阅地址
-- `ports[]`：每个 socks5 监听口，以及绑定到哪个出站，如 `proxy`、`auto`、某个具体节点 tag
-- `dns`：优先使用远程 DoT/DoH，并通过代理 detour 解析
-- `routing.ruleSetUrls`：可继续补充官方支持的远程规则集
+`SOCKS5 目标出口` 的含义就是：
+- 该端口实际通过哪个节点或节点组访问外网
 
-## 生成配置的大致结构
+例如：
+- 目标出口设为 `HK-1`
+  - 这个端口的流量就固定走 `HK-1`
+- 目标出口设为某个节点组
+  - 这个端口就按该节点组策略转发
 
-当前生成的 `sing-box` 配置包含：
-- `log`
-- `dns`
-- `inbounds`
-- `outbounds`
-- `route`
-- `experimental`
+## 测试方法
 
-其中：
-- `outbounds` 默认包含 `direct`、`block`
-- 订阅节点会被转换为对应协议出站
-- 额外生成两个逻辑组：
-  - `proxy`：`selector`
-  - `auto`：`urltest`
-- `inbounds` 来自 `ports[]`
-- `route.rules` 会将每个入站绑定到对应目标出站
+### 1. 启动 Web UI
+
+在项目目录执行：
+
+```powershell
+node src/server.js
+```
+
+然后访问：
+
+```text
+http://127.0.0.1:18080
+```
+
+### 2. 更新订阅并生成配置
+
+在 Web UI 中依次操作：
+
+1. 填写订阅地址
+2. `保存配置`
+3. `更新订阅`
+4. `生成 sing-box 配置`
+
+检查以下文件是否生成：
+
+- `D:\sub2socks5\data\subscription-state.json`
+- `D:\sub2socks5\runtime\sing-box.json`
+
+### 3. 启动 sing-box
+
+可通过 Web UI 点击 `启动 sing-box`，也可以手动测试：
+
+```powershell
+D:\sub2socks5\bin\sing-box.exe run -c D:\sub2socks5\runtime\sing-box.json
+```
+
+### 4. 测试端口监听
+
+例如当前默认端口是 `53456`，可执行：
+
+```powershell
+Test-NetConnection -ComputerName 127.0.0.1 -Port 53456
+```
+
+若返回 `TcpTestSucceeded = True`，表示端口监听正常。
+
+### 5. 测试代理访问 Google
+
+```powershell
+curl.exe --socks5-hostname 127.0.0.1:53456 --max-time 25 https://www.google.com/generate_204 -I -s -o NUL -w "%{http_code}"
+```
+
+预期返回：
+
+```text
+204
+```
+
+### 6. 测试代理访问 Gstatic
+
+```powershell
+curl.exe --socks5-hostname 127.0.0.1:53456 --max-time 25 https://www.gstatic.com/generate_204 -I -s -o NUL -w "%{http_code}"
+```
+
+预期返回：
+
+```text
+204
+```
+
+## 现阶段已验证结论
+
+- `SOCKS5` 端口可以正常监听
+- 代理流量可以通过 `sing-box` 正常转发
+- Google / Gstatic 已完成真实访问测试
+- 主页可以立即感知节点页保存后的节点组变化
+- 当前 DNS 修复后，远程解析不再出现之前的超时问题
 
 ## 注意事项
 
-- 目前实现了常见订阅协议解析：`vmess`、`vless`、`trojan`、`ss`、`hysteria2`、`tuic`
-- 订阅格式差异很大，不同机场私有字段可能需要继续兼容
-- 该工具会生成 `D:\sub2socks5\runtime\sing-box.json`，你可以在 UI 中查看
-- 自动下载依赖 GitHub Releases 可访问；若网络受限，下载会失败
-- 当前是可运行原型，尚未覆盖 sing-box 全部协议细节与全部订阅变体
+- 当前仓库里可能存在联调时留下的测试节点组 `test-group`
+- 若不需要，可在节点管理页删除
+- 目前节点组 `fallback` 策略还是以安全兼容方式映射，不是完全等价的 sing-box 原生高级行为
+- 某些机场私有字段、私有协议扩展仍可能需要继续兼容
+- 当前重点是可用性和新版 `sing-box` 兼容性，后续仍可继续完善 UI 和节点表单
 
-## DNS 防泄漏策略
+## 后续建议
 
-默认生成配置时：
-- `dns.final` 指向远程 DNS
-- 远程 DNS 使用 `detour: proxy`
-- 入站启用 `sniff` 与 `sniff_override_destination`
-- 保留 `direct` DNS 仅供显式直连模式使用
-
-## 后续可继续增强的方向
-
-- 增加“指定 sing-box 版本下载”而不仅是 latest
-- 增加下载进度展示与失败重试
-- 增加节点组图形化编辑器，而不是直接编辑 JSON
-- 增加定时订阅刷新与自动热重载
-- 更完整对齐 sing-box 官方最新配置字段与传输层参数
+- 给手动节点增加按协议分类的完整表单
+- 完善节点组 `fallback` 的更精细策略映射
+- 增加多端口可视化编辑
+- 增加订阅自动刷新与运行时热更新
+- 增加更多连通性诊断与测速工具

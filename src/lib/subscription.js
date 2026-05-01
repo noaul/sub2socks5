@@ -155,11 +155,9 @@ function parseShadowsocks(line) {
   const [basePart, queryPart = ''] = mainPart.split('?');
   let decodedMain = basePart;
 
-  if (!basePart.includes('@')) {
-    const decoded = decodeSsUserInfo(basePart);
-    if (decoded) {
-      decodedMain = decoded;
-    }
+  const decoded = decodeSsUserInfo(basePart);
+  if (decoded) {
+    decodedMain = decoded;
   }
 
   const finalMain = queryPart ? `${decodedMain}?${queryPart}` : decodedMain;

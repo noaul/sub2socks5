@@ -1,0 +1,5 @@
+*.exe
+*.db
+node_modules/
+.DS_Store
+runtime/singbox-test.*.log
