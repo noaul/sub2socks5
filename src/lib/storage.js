@@ -87,6 +87,9 @@ export const defaultConfig = {
     manualNodes: [],
     groups: []
   },
+  runtimeState: {
+    fallbackGroups: {}
+  },
   ports: [
     {
       tag: 'default-socks',

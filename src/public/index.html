@@ -160,23 +160,12 @@
                 <span>默认路由出口</span>
                 <select id="field-route-final"></select>
               </label>
-              <label>
-                <span>SOCKS 监听地址</span>
-                <input id="field-port-listen" type="text" />
-              </label>
-              <label>
-                <span>SOCKS 端口</span>
-                <input id="field-port-number" type="number" min="1" step="1" />
-              </label>
-              <label>
-                <span>SOCKS 目标出口</span>
-                <select id="field-port-target"></select>
-              </label>
-              <label>
-                <span>启用 sniff</span>
-                <input id="field-port-sniff" type="checkbox" />
-              </label>
             </div>
+            <div class="section-heading socks-services-heading">
+              <h3>SOCKS5 服务</h3>
+              <button id="add-socks-service" type="button">+ 添加 SOCKS5 服务</button>
+            </div>
+            <div id="socks-services" class="timeline"></div>
             <p class="form-note">表单模式当前覆盖高频字段；复杂规则、DNS 服务器和多端口高级配置请切换到 JSON 模式。</p>
           </div>
 

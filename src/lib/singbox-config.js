@@ -10,7 +10,7 @@ export function buildSingBoxConfig(appConfig, subscriptionState) {
   const normalizedNodes = mergedNodes
     .map(normalizeOutbound)
     .filter(isUsableOutbound);
-  const groups = normalizeGroups(appConfig.nodeRegistry?.groups || [], normalizedNodes);
+  const groups = normalizeGroups(appConfig.nodeRegistry?.groups || [], normalizedNodes, appConfig.runtimeState?.fallbackGroups || {});
 
   const outbounds = [
     {
@@ -212,7 +212,7 @@ function normalizeDnsServer(server) {
   return stripUndefined(server);
 }
 
-function normalizeGroups(groups, nodes) {
+function normalizeGroups(groups, nodes, fallbackStates) {
   const nodeTags = new Set(nodes.map((node) => node.tag));
   return groups
     .filter((group) => group?.tag && Array.isArray(group.members) && group.members.length)
@@ -222,11 +222,13 @@ function normalizeGroups(groups, nodes) {
         return null;
       }
       if (group.strategy === 'fallback') {
+        const fallbackState = fallbackStates[group.tag] || {};
+        const selected = members.includes(fallbackState.current) ? fallbackState.current : members[0];
         return {
           type: 'selector',
           tag: group.tag,
           outbounds: members,
-          default: members[0],
+          default: selected,
           interrupt_exist_connections: false
         };
       }

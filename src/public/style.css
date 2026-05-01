@@ -236,6 +236,12 @@ button:disabled {
   margin: 14px 0 0;
   color: #b6c6ef;
 }
+.socks-services-heading {
+  margin-top: 18px;
+}
+.timeline .form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
 .kv-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

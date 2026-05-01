@@ -2,13 +2,15 @@ const statusEl = document.getElementById('node-status');
 const manualNodesEl = document.getElementById('manual-nodes');
 const groupsEl = document.getElementById('groups');
 const availableNodeListEl = document.getElementById('available-node-list');
+const manualNodeInputEl = document.getElementById('manual-node-input');
 const NODES_UPDATED_KEY = 'sub2socks5:nodes-updated-at';
 
 let state = {
   subscriptionNodes: [],
   manualNodes: [],
   groups: [],
-  availableOutbounds: []
+  availableOutbounds: [],
+  fallbackStates: {}
 };
 
 async function load() {
@@ -65,6 +67,22 @@ function renderGroups() {
   const selectableNodes = getSelectableNodes();
 
   for (const [index, group] of state.groups.entries()) {
+    const fallbackState = state.fallbackStates?.[group.tag] || null;
+    const statusHtml = group.strategy === 'fallback'
+      ? `
+        <div class="kv-grid">
+          <div class="kv-item">
+            <div class="key">当前活跃节点</div>
+            <div class="value">${escapeHtml(fallbackState?.current || group.members?.[0] || '')}</div>
+          </div>
+          <div class="kv-item">
+            <div class="key">最近切换时间</div>
+            <div class="value">${escapeHtml(fallbackState?.updatedAt || '')}</div>
+          </div>
+        </div>
+      `
+      : '';
+
     const item = document.createElement('div');
     item.className = 'timeline-item';
     item.innerHTML = `
@@ -78,7 +96,20 @@ function renderGroups() {
             <option value="fallback" ${group.strategy === 'fallback' ? 'selected' : ''}>fallback</option>
           </select>
         </label>
+        <label>
+          <span>测试地址</span>
+          <input data-kind="group" data-index="${index}" data-field="url" value="${escapeHtmlAttr(group.url || 'https://www.gstatic.com/generate_204')}" />
+        </label>
+        <label>
+          <span>测试间隔</span>
+          <input data-kind="group" data-index="${index}" data-field="interval" value="${escapeHtmlAttr(group.interval || '10m')}" />
+        </label>
+        <label>
+          <span>超时毫秒</span>
+          <input data-kind="group" data-index="${index}" data-field="timeoutMs" type="number" min="1000" step="500" value="${escapeHtmlAttr(String(group.timeoutMs || 5000))}" />
+        </label>
       </div>
+      ${statusHtml}
       <div class="member-selector" data-group-members="${index}">
         ${renderGroupMembers(index, group, selectableNodes)}
       </div>
@@ -144,13 +175,35 @@ document.getElementById('back-home').addEventListener('click', () => {
   window.location.href = '/';
 });
 
-document.getElementById('add-manual-node').addEventListener('click', () => {
-  state.manualNodes.push({ tag: '', type: 'vless', server: '', server_port: 443, uuid: '', password: '' });
-  renderManualNodes();
+document.getElementById('import-manual-nodes').addEventListener('click', async () => {
+  try {
+    const response = await fetch('/api/nodes/import', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ raw: manualNodeInputEl.value })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.error?.message || '导入失败');
+    }
+    state.manualNodes.push(...(data.nodes || []));
+    manualNodeInputEl.value = '';
+    renderManualNodes();
+    setStatus(`成功导入 ${data.nodes?.length || 0} 个节点`, 'success');
+  } catch (error) {
+    setStatus(error.message, 'error');
+  }
 });
 
 document.getElementById('add-group').addEventListener('click', () => {
-  state.groups.push({ tag: '', strategy: 'urltest', members: [] });
+  state.groups.push({
+    tag: '',
+    strategy: 'urltest',
+    url: 'https://www.gstatic.com/generate_204',
+    interval: '10m',
+    timeoutMs: 5000,
+    members: []
+  });
   renderGroups();
 });
 
@@ -189,7 +242,7 @@ document.addEventListener('input', (event) => {
   if (target.dataset.kind === 'group') {
     const index = Number(target.dataset.index);
     const field = target.dataset.field;
-    state.groups[index][field] = target.value;
+    state.groups[index][field] = field === 'timeoutMs' ? Number(target.value || 0) : target.value;
   }
 
   if (target.dataset.groupMemberSelect) {

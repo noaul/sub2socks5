@@ -21,9 +21,23 @@
 
     <section>
       <div class="section-heading">
-        <h2>手动节点</h2>
-        <button id="add-manual-node" type="button">添加手动节点</button>
+        <h2>手动导入节点</h2>
+        <button id="import-manual-nodes" type="button">导入为手动节点</button>
       </div>
+      <textarea id="manual-node-input" spellcheck="false" placeholder="支持粘贴单行节点、多行节点订阅，或结构化 JSON。例如：
+
+vless://uuid@example.com:443?security=tls&sni=example.com#my-node
+
+或：
+[
+  {
+    &quot;type&quot;: &quot;vless&quot;,
+    &quot;tag&quot;: &quot;my-node&quot;,
+    &quot;server&quot;: &quot;example.com&quot;,
+    &quot;server_port&quot;: 443,
+    &quot;uuid&quot;: &quot;...&quot;
+  }
+]"></textarea>
       <div id="manual-nodes" class="timeline"></div>
     </section>
 

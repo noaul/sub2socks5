@@ -1,306 +1,365 @@
 # sub2socks5
 
-一个基于 `Node.js + sing-box` 的本地代理管理器，目标是把机场订阅转换成可视化、可管理、可多端口分流的 `SOCKS5` 代理服务。
+一个基于 `Node.js + sing-box` 的本地代理管理器，用来把机场订阅、手动节点和节点组组织成可视化、可多端口分流的 `SOCKS5` 代理服务。
 
-当前已经支持：
-- 拉取机场订阅并解析节点
-- 管理订阅节点、手动节点、节点组
-- 生成符合新版 `sing-box` 结构的配置
-- 启动本地 `sing-box` 内核提供 `SOCKS5` 服务
-- 通过 Web UI 管理配置、节点、内核、运行状态和日志
-- 自动检测系统架构并下载匹配的 `sing-box` 内核
-- 通过远程 DNS + 引导 DNS 的方式尽量降低 DNS 泄漏风险
+## 当前能力
 
-## 当前成果
-
-- Web UI 运行在 `http://127.0.0.1:18080`
-- 已完成订阅解析，支持常见协议：
+- 拉取订阅并解析常见节点协议
+- 支持订阅内容为：
+  - 单行节点链接
+  - 多行订阅文本
+  - Base64 / URL Safe Base64 订阅
+- 支持协议：
   - `vmess`
   - `vless`
   - `trojan`
   - `shadowsocks`
   - `hysteria2`
   - `tuic`
-- 已支持订阅内容为：
-  - 纯链接列表
-  - Base64 编码订阅
-  - URL Safe Base64 订阅
-- 已支持节点管理：
-  - 订阅节点展示
-  - 手动添加节点
-  - 手动添加节点组
-  - 节点组成员通过“`+ 添加节点` + 下拉框”方式选择
-  - 手动节点与节点组会持久化保存，不会被更新订阅覆盖
-- 已支持主页配置：
-  - `SOCKS5` 监听地址与端口
-  - 默认路由出口
-  - `SOCKS5` 目标出口
-  - DNS 设置
-  - 表单 / JSON 双视图切换
-- 已支持主页与节点页联动：
-  - 在节点管理页保存节点组后，主页下拉框会立即出现新的节点组出口
-- 已支持内核管理：
-  - 检测当前架构
+- 支持多 `SOCKS5` 服务：
+  - 可在主页添加多个本地 `SOCKS5` 监听端口
+  - 每个端口可绑定不同节点或节点组
+- 支持节点管理：
+  - 订阅节点
+  - 手动节点
+  - 节点组
+- 支持手动节点导入：
+  - 单行节点链接
+  - 多行节点文本
+  - 结构化 JSON
+- 支持节点组策略：
+  - `urltest`
+  - `fallback`（当前为应用层故障转移第一版）
+- 支持节点组自定义参数：
+  - 测试地址
+  - 测试间隔
+  - 超时毫秒
+- 支持内核管理：
+  - 检测系统架构
   - 获取版本列表
-  - 设置计划下载版本
+  - 设置计划版本
   - 拉取匹配架构的 `sing-box` 内核
-- 已修复 `sing-box` 近期版本配置兼容问题：
-  - 旧版 DNS 写法移除
-  - 旧版 inbound 字段移除
-  - 新版 DNS server / rule / route 结构适配
-- 已完成真实代理联通测试：
-  - `SOCKS5` 端口监听成功
-  - 通过代理访问 `https://www.google.com/generate_204` 成功返回 `204`
-  - 通过代理访问 `https://www.gstatic.com/generate_204` 成功返回 `204`
+- 支持 DNS 防泄漏优化：
+  - 远程 DoH
+  - 引导 DNS
+  - 默认域名解析器优化
+- 支持运行状态与日志查看
 
-## 项目架构
-
-项目采用“`Node.js` 管理进程 + 本地 `sing-box` 内核 + 静态 Web UI”的结构。
-
-### 目录结构
-
-- `D:\sub2socks5\src`
-  - 源码目录
-- `D:\sub2socks5\src\lib`
-  - 后端核心逻辑
-- `D:\sub2socks5\src\public`
-  - Web UI 静态页面与前端脚本
-- `D:\sub2socks5\data`
-  - 持久化数据目录
-- `D:\sub2socks5\runtime`
-  - 运行时生成文件目录
-- `D:\sub2socks5\bin`
-  - `sing-box` 内核与版本信息目录
-
-### 核心模块
+## 当前项目结构
 
 - `D:\sub2socks5\src\server.js`
   - HTTP 服务入口
-  - 提供 Web UI 页面
-  - 提供配置、订阅、节点、内核、运行时 API
-
-- `D:\sub2socks5\src\lib\storage.js`
-  - 管理默认配置
-  - 读写配置文件、订阅状态、架构信息、版本列表、计划内核信息
-  - 负责 `data / runtime / bin` 目录初始化
-
+  - 提供 Web UI 页面和后端 API
 - `D:\sub2socks5\src\lib\subscription.js`
-  - 拉取订阅
-  - 自动识别并解码 Base64 / URL Safe Base64
-  - 解析多种代理协议为统一节点结构
-
+  - 订阅拉取与节点解析
+  - 手动节点原始输入解析
 - `D:\sub2socks5\src\lib\singbox-config.js`
-  - 将应用配置、订阅节点、手动节点、节点组转换为 `sing-box` 配置
-  - 生成 `dns / inbounds / outbounds / route / experimental`
-  - 负责 DNS 防泄漏策略生成
-
+  - 业务配置转 `sing-box` 配置
 - `D:\sub2socks5\src\lib\singbox-manager.js`
-  - 启动、停止、跟踪 `sing-box` 进程
-  - 缓存运行状态与日志
-
+  - `sing-box` 进程控制
 - `D:\sub2socks5\src\lib\singbox-release.js`
-  - 检测平台架构
-  - 读取 / 更新 GitHub Release 版本信息
-  - 下载并安装匹配架构的 `sing-box`
-
+  - `sing-box` Release 管理与下载
+- `D:\sub2socks5\src\lib\storage.js`
+  - 默认配置与持久化
+- `D:\sub2socks5\src\public\index.html`
+  - 主页
 - `D:\sub2socks5\src\public\app.js`
-  - 主页前端逻辑
-  - 管理配置编辑、版本检测、内核下载、运行控制、日志刷新、节点组联动
-
+  - 主页交互逻辑
+- `D:\sub2socks5\src\public\nodes.html`
+  - 节点管理页
 - `D:\sub2socks5\src\public\nodes.js`
-  - 节点管理页前端逻辑
-  - 管理手动节点、节点组、成员选择
+  - 节点管理交互逻辑
+- `D:\sub2socks5\src\public\style.css`
+  - 页面样式
 
-### 持久化文件
+### 持久化目录
 
-- `D:\sub2socks5\data\app-config.json`
-  - 主配置文件
-- `D:\sub2socks5\data\subscription-state.json`
-  - 订阅解析结果
-- `D:\sub2socks5\data\architecture-info.json`
-  - 当前架构信息
-- `D:\sub2socks5\data\release-list.json`
-  - 固化版本列表
-- `D:\sub2socks5\data\planned-kernel-info.json`
-  - 计划下载的内核版本
-- `D:\sub2socks5\runtime\sing-box.json`
-  - 生成后的运行配置
-- `D:\sub2socks5\bin\sing-box.exe`
-  - 已安装的内核
-- `D:\sub2socks5\bin\sing-box-version.json`
-  - 已安装内核版本信息
+- `D:\sub2socks5\data`
+  - 业务配置、订阅状态、架构信息、版本列表、计划内核信息
+- `D:\sub2socks5\runtime`
+  - 生成后的 `sing-box.json`
+- `D:\sub2socks5\bin`
+  - 已安装的 `sing-box` 内核和版本信息
 
-## 工作流程
+## 运行流程
 
-### 首次使用
-
-1. 启动服务：
+1. 启动 Web UI：
    - `node src/server.js`
-2. 打开主页：
-   - `http://127.0.0.1:18080`
-3. 点击 `检测当前架构`
-4. 选择或确认计划内核版本
-5. 点击 `拉取 sing-box 内核`
-6. 填写订阅地址
-7. 点击 `保存配置`
-8. 点击 `更新订阅`
-9. 检查节点是否解析成功
-10. 按需设置默认出口和 `SOCKS5` 目标出口
-11. 点击 `生成 sing-box 配置`
-12. 点击 `启动 sing-box`
-
-### 节点管理流程
-
-1. 在主页点击 `节点管理`
-2. 可添加：
-   - 手动节点
-   - 节点组
-3. 节点组成员通过 `+ 添加节点` 逐项添加
-4. 点击 `保存节点配置`
-5. 保存后主页出口下拉框会自动刷新并显示新的节点组
-
-### 运行流程
-
-1. Web UI 保存配置到 `D:\sub2socks5\data\app-config.json`
-2. 后端拉取订阅并保存到 `D:\sub2socks5\data\subscription-state.json`
-3. 生成 `D:\sub2socks5\runtime\sing-box.json`
-4. 后端调用本地 `sing-box` 内核启动代理
-5. `sing-box` 在指定端口监听 `SOCKS5`
-6. 不同端口可绑定不同节点或节点组出口
+2. 在主页保存基础配置
+3. 更新订阅或导入手动节点
+4. 生成 `sing-box` 配置
+5. 启动 `sing-box`
+6. 不同本地 `SOCKS5` 端口按配置走不同节点 / 节点组
 
 ## 当前 DNS 方案
 
-当前默认 DNS 逻辑是：
+默认使用：
 
-- 远程 DNS：
+- 远程 DoH：
   - `https://cloudflare-dns.com/dns-query`
 - 引导 DNS：
   - `223.5.5.5:53`
-- 远程 DoH 使用代理出站
-- 默认域名解析器优先使用引导 DNS
 
-这样做的原因：
-- 避免直接使用本地系统 DNS 造成泄漏
-- 避免部分节点环境下远程 DoH 首次解析超时
-- 保证代理连接建立前后的域名解析更稳定
+当前思路：
 
-## 当前默认出站逻辑
+- 远程 DoH 走代理出站
+- 默认域名解析优先由引导 DNS 协助完成
+- 避免直接依赖本地系统 DNS
 
-生成配置后，默认可选出口包括：
+## 节点组说明
 
-- `proxy`
-  - 手动选择器，包含全部可用节点 / 节点组
-- `auto`
-  - 自动测速组
-- `direct`
-  - 直连
-- `block`
-  - 拦截
-- 订阅节点
-- 手动节点
-- 用户自定义节点组
+### `urltest`
 
-`SOCKS5 目标出口` 的含义就是：
-- 该端口实际通过哪个节点或节点组访问外网
+- 使用 `sing-box` 原生 `urltest`
+- 会按测试地址定时探测节点
+- 选择延迟更优的节点
 
-例如：
-- 目标出口设为 `HK-1`
-  - 这个端口的流量就固定走 `HK-1`
-- 目标出口设为某个节点组
-  - 这个端口就按该节点组策略转发
+### `fallback`
 
-## 测试方法
+- 当前不是 `sing-box` 原生出站类型
+- 目前实现为“应用层故障转移第一版”
+- 后端会维护当前活跃节点
+- 后端会定时做健康检查
+- 当当前节点不可用时切换到下一个可用节点
+- 当前状态会显示在节点管理页
 
-### 1. 启动 Web UI
+## Web UI 使用说明
 
-在项目目录执行：
+### 主页
+
+主页当前支持：
+
+- 检测架构
+- 检查内核版本
+- 检查版本更新
+- 设置计划版本
+- 拉取 `sing-box` 内核
+- 保存配置
+- 更新订阅
+- 生成配置
+- 启动 / 停止 `sing-box`
+- 添加多个 `SOCKS5` 服务
+- 查看运行状态、生成结果、日志
+
+### 节点管理页
+
+节点管理页当前支持：
+
+- 导入手动节点
+- 查看 / 删除手动节点
+- 添加节点组
+- 为节点组设置：
+  - 策略
+  - 测试地址
+  - 测试间隔
+  - 超时毫秒
+- 为节点组按行添加成员
+- 查看 `fallback` 当前活跃节点和最近切换时间
+
+## 手动节点导入说明
+
+手动节点导入框支持以下格式：
+
+### 1. 单行节点链接
+
+```text
+vless://uuid@example.com:443?security=tls&sni=example.com#my-node
+```
+
+### 2. 多行节点文本
+
+```text
+vless://...
+trojan://...
+ss://...
+```
+
+### 3. 结构化 JSON
+
+```json
+{
+  "type": "vless",
+  "tag": "my-node",
+  "server": "example.com",
+  "server_port": 443,
+  "uuid": "..."
+}
+```
+
+### 4. 带 `raw` 的结构化 JSON
+
+```json
+{
+  "raw": "vless://uuid@example.com:443?security=tls#my-node"
+}
+```
+
+处理逻辑：
+
+1. 后端先判断是否为 JSON
+2. 如果是 JSON，优先按结构化节点处理
+3. 如果不是 JSON，按订阅 / 链接文本解析
+4. 先识别协议，再按对应协议模板匹配
+
+## API 列表
+
+### 配置相关
+
+- `GET /api/config`
+  - 获取当前完整配置、订阅状态、可用出口、内核状态等
+- `POST /api/config`
+  - 保存业务配置
+
+### 订阅相关
+
+- `POST /api/subscription/refresh`
+  - 拉取并解析订阅
+
+### 节点相关
+
+- `GET /api/nodes`
+  - 获取订阅节点、手动节点、节点组、可用出口、`fallback` 状态
+- `POST /api/nodes`
+  - 保存手动节点和节点组
+- `POST /api/nodes/import`
+  - 导入原始节点输入并解析为节点
+
+### 内核相关
+
+- `GET /api/kernel/status`
+- `POST /api/kernel/architecture`
+- `GET /api/kernel/releases`
+- `POST /api/kernel/releases/update`
+- `POST /api/kernel/plan`
+- `GET /api/kernel/download`
+- `POST /api/kernel/download`
+
+### 运行时相关
+
+- `POST /api/runtime/generate`
+- `POST /api/runtime/start`
+- `POST /api/runtime/stop`
+- `GET /api/runtime/generated`
+- `GET /api/runtime/logs`
+
+## API 测试方法
+
+下面是当前阶段推荐的 Windows / PowerShell 测试方法。
+
+### 1. 启动服务
 
 ```powershell
 node src/server.js
 ```
 
-然后访问：
+访问：
 
 ```text
 http://127.0.0.1:18080
 ```
 
-### 2. 更新订阅并生成配置
-
-在 Web UI 中依次操作：
-
-1. 填写订阅地址
-2. `保存配置`
-3. `更新订阅`
-4. `生成 sing-box 配置`
-
-检查以下文件是否生成：
-
-- `D:\sub2socks5\data\subscription-state.json`
-- `D:\sub2socks5\runtime\sing-box.json`
-
-### 3. 启动 sing-box
-
-可通过 Web UI 点击 `启动 sing-box`，也可以手动测试：
+### 2. 测试基础配置接口
 
 ```powershell
-D:\sub2socks5\bin\sing-box.exe run -c D:\sub2socks5\runtime\sing-box.json
+Invoke-RestMethod -Uri "http://127.0.0.1:18080/api/config"
 ```
 
-### 4. 测试端口监听
+### 3. 测试节点列表接口
 
-例如当前默认端口是 `53456`，可执行：
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:18080/api/nodes"
+```
+
+### 4. 测试手动节点导入接口
+
+```powershell
+$body = @{
+  raw = "vless://uuid@example.com:443?security=tls&sni=example.com#my-node"
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:18080/api/nodes/import" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body $body
+```
+
+### 5. 测试生成配置
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:18080/api/runtime/generate" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body "{}"
+```
+
+### 6. 测试启动 `sing-box`
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:18080/api/runtime/start" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body "{}"
+```
+
+### 7. 测试运行日志
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:18080/api/runtime/logs"
+```
+
+### 8. 测试 SOCKS5 端口监听
+
+假设当前监听端口为 `53456`：
 
 ```powershell
 Test-NetConnection -ComputerName 127.0.0.1 -Port 53456
 ```
 
-若返回 `TcpTestSucceeded = True`，表示端口监听正常。
-
-### 5. 测试代理访问 Google
+### 9. 测试 SOCKS5 代理访问 Google
 
 ```powershell
 curl.exe --socks5-hostname 127.0.0.1:53456 --max-time 25 https://www.google.com/generate_204 -I -s -o NUL -w "%{http_code}"
 ```
 
-预期返回：
+预期：
 
 ```text
 204
 ```
 
-### 6. 测试代理访问 Gstatic
+### 10. 测试 SOCKS5 代理访问 Gstatic
 
 ```powershell
 curl.exe --socks5-hostname 127.0.0.1:53456 --max-time 25 https://www.gstatic.com/generate_204 -I -s -o NUL -w "%{http_code}"
 ```
 
-预期返回：
+预期：
 
 ```text
 204
 ```
 
-## 现阶段已验证结论
+## 当前已验证结论
 
-- `SOCKS5` 端口可以正常监听
-- 代理流量可以通过 `sing-box` 正常转发
-- Google / Gstatic 已完成真实访问测试
-- 主页可以立即感知节点页保存后的节点组变化
-- 当前 DNS 修复后，远程解析不再出现之前的超时问题
+- Web UI 可以正常启动
+- `GET /api/config` 正常返回
+- `GET /api/nodes` 正常返回
+- `POST /api/nodes/import` 已实际验证可成功导入 `vless://...` 节点
+- `SOCKS5` 端口已真实验证可监听
+- 通过代理访问 Google / Gstatic 已真实验证返回 `204`
 
 ## 注意事项
 
-- 当前仓库里可能存在联调时留下的测试节点组 `test-group`
-- 若不需要，可在节点管理页删除
-- 目前节点组 `fallback` 策略还是以安全兼容方式映射，不是完全等价的 sing-box 原生高级行为
-- 某些机场私有字段、私有协议扩展仍可能需要继续兼容
-- 当前重点是可用性和新版 `sing-box` 兼容性，后续仍可继续完善 UI 和节点表单
+- `fallback` 当前仍是第一版实现，后续还可以继续增强健康检查和回切逻辑
+- 某些机场私有字段可能仍需继续兼容
+- 运行期文件和本地订阅状态不建议提交到 Git
 
 ## 后续建议
 
-- 给手动节点增加按协议分类的完整表单
-- 完善节点组 `fallback` 的更精细策略映射
-- 增加多端口可视化编辑
-- 增加订阅自动刷新与运行时热更新
-- 增加更多连通性诊断与测速工具
+- 给手动导入增加导入预览
+- 给结构化 JSON 增加协议默认字段补全
+- 继续完善 Mihomo 风格 `fallback`
+- 为 `fallback` 增加健康检查结果展示

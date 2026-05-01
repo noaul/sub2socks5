@@ -18,6 +18,7 @@ import {
   generatedConfigPath
 } from './lib/storage.js';
 import { fetchSubscription } from './lib/subscription.js';
+import { parseManualNodeInput } from './lib/subscription.js';
 import { buildSingBoxConfig } from './lib/singbox-config.js';
 import { SingBoxManager } from './lib/singbox-manager.js';
 import {
@@ -46,6 +47,7 @@ let downloadState = {
   progress: null,
   updatedAt: null
 };
+let fallbackTimer = null;
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -73,6 +75,7 @@ const server = http.createServer(async (req, res) => {
         const body = await readJson(req);
         appConfig = body;
         await saveConfig(appConfig);
+        restartFallbackLoop();
         return ok(res, { ok: true });
       }
       return methodNotAllowed(res, ['GET', 'POST']);
@@ -92,15 +95,19 @@ const server = http.createServer(async (req, res) => {
           subscriptionNodes: [{ tag: 'direct', type: 'direct', source: 'builtin' }, ...(subscriptionState.nodes || [])],
           manualNodes: appConfig.nodeRegistry?.manualNodes || [],
           groups: appConfig.nodeRegistry?.groups || [],
-          availableOutbounds: collectAvailableOutbounds(appConfig, subscriptionState)
+          availableOutbounds: collectAvailableOutbounds(appConfig, subscriptionState),
+          fallbackStates: appConfig.runtimeState?.fallbackGroups || {}
         });
       }
       if (req.method === 'POST') {
         const body = await readJson(req);
         appConfig.nodeRegistry ||= { manualNodes: [], groups: [] };
         appConfig.nodeRegistry.manualNodes = Array.isArray(body.manualNodes) ? body.manualNodes : [];
-        appConfig.nodeRegistry.groups = Array.isArray(body.groups) ? body.groups : [];
+        appConfig.nodeRegistry.groups = Array.isArray(body.groups)
+          ? body.groups.map(normalizeGroupConfig)
+          : [];
         await saveConfig(appConfig);
+        restartFallbackLoop();
         return ok(res, {
           ok: true,
           manualNodes: appConfig.nodeRegistry.manualNodes,
@@ -109,6 +116,15 @@ const server = http.createServer(async (req, res) => {
         });
       }
       return methodNotAllowed(res, ['GET', 'POST']);
+    }
+
+    if (url.pathname === '/api/nodes/import') {
+      if (req.method === 'POST') {
+        const body = await readJson(req);
+        const result = parseManualNodeInput(body.raw || '');
+        return ok(res, result);
+      }
+      return methodNotAllowed(res, ['POST']);
     }
 
     if (url.pathname === '/api/kernel/architecture') {
@@ -257,6 +273,7 @@ const server = http.createServer(async (req, res) => {
         const generated = buildSingBoxConfig(appConfig, subscriptionState);
         await writeGeneratedConfig(generated);
         await manager.start(appConfig.app.singBoxBinary, generatedConfigPath);
+        restartFallbackLoop();
         return ok(res, manager.getStatus());
       }
       return methodNotAllowed(res, ['POST']);
@@ -265,6 +282,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/runtime/stop') {
       if (req.method === 'POST') {
         await manager.stop();
+        stopFallbackLoop();
         return ok(res, manager.getStatus());
       }
       return methodNotAllowed(res, ['POST']);
@@ -300,6 +318,7 @@ server.listen(appConfig.app.port, appConfig.app.host, async () => {
       const generated = buildSingBoxConfig(appConfig, subscriptionState);
       await writeGeneratedConfig(generated);
       await manager.start(appConfig.app.singBoxBinary, generatedConfigPath);
+      restartFallbackLoop();
     } catch (error) {
       manager.pushLog(`Auto start failed: ${error.message}`);
     }
@@ -402,6 +421,111 @@ function collectAvailableOutbounds(config, subscription) {
       label: `${group.tag}（${group.strategy} / 节点组）`
     }))
   ];
+}
+
+function normalizeGroupConfig(group) {
+  return {
+    tag: group?.tag || '',
+    strategy: group?.strategy || 'urltest',
+    url: group?.url || 'https://www.gstatic.com/generate_204',
+    interval: group?.interval || '10m',
+    timeoutMs: Number(group?.timeoutMs || 5000),
+    members: Array.isArray(group?.members) ? group.members : []
+  };
+}
+
+function restartFallbackLoop() {
+  stopFallbackLoop();
+  const fallbackGroups = (appConfig.nodeRegistry?.groups || []).filter((group) => group?.strategy === 'fallback' && Array.isArray(group.members) && group.members.length);
+  if (!fallbackGroups.length) {
+    return;
+  }
+
+  fallbackTimer = setInterval(() => {
+    evaluateFallbackGroups().catch((error) => {
+      manager.pushLog(`fallback evaluator error: ${error.message}`);
+    });
+  }, 30000);
+
+  evaluateFallbackGroups().catch((error) => {
+    manager.pushLog(`fallback evaluator error: ${error.message}`);
+  });
+}
+
+function stopFallbackLoop() {
+  if (fallbackTimer) {
+    clearInterval(fallbackTimer);
+    fallbackTimer = null;
+  }
+}
+
+async function evaluateFallbackGroups() {
+  if (!manager.getStatus().running) {
+    return;
+  }
+
+  const groups = (appConfig.nodeRegistry?.groups || []).filter((group) => group?.strategy === 'fallback' && Array.isArray(group.members) && group.members.length);
+  if (!groups.length) {
+    return;
+  }
+
+  appConfig.runtimeState ||= {};
+  appConfig.runtimeState.fallbackGroups ||= {};
+
+  for (const group of groups) {
+    const current = appConfig.runtimeState.fallbackGroups[group.tag]?.current || group.members[0];
+    const nextAvailable = await chooseHealthyFallbackMember(group);
+    if (!nextAvailable) {
+      continue;
+    }
+    if (nextAvailable !== current) {
+      appConfig.runtimeState.fallbackGroups[group.tag] = {
+        current: nextAvailable,
+        updatedAt: new Date().toISOString()
+      };
+      await saveConfig(appConfig);
+      const generated = buildSingBoxConfig(appConfig, subscriptionState);
+      await writeGeneratedConfig(generated);
+      manager.pushLog(`fallback group ${group.tag} switched from ${current} to ${nextAvailable}`);
+    }
+  }
+}
+
+async function chooseHealthyFallbackMember(group) {
+  const currentState = appConfig.runtimeState?.fallbackGroups?.[group.tag];
+  const preferredOrder = currentState?.current
+    ? [currentState.current, ...group.members.filter((item) => item !== currentState.current)]
+    : group.members.slice();
+
+  for (const memberTag of preferredOrder) {
+    const ok = await probeOutbound(memberTag, group);
+    if (ok) {
+      return memberTag;
+    }
+  }
+  return null;
+}
+
+async function probeOutbound(memberTag, group) {
+  const url = group.url || 'https://www.gstatic.com/generate_204';
+  const timeout = Number(group.timeoutMs || 5000);
+  try {
+    const targetUrl = new URL(url);
+    const host = targetUrl.hostname;
+    const port = targetUrl.port || (targetUrl.protocol === 'https:' ? '443' : '80');
+    const connectTimeout = AbortSignal.timeout(timeout);
+    const response = await fetch(`http://127.0.0.1:19090/proxies/${encodeURIComponent(memberTag)}/delay?url=${encodeURIComponent(url)}&timeout=${timeout}`, {
+      signal: connectTimeout
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return typeof data?.delay === 'number' && data.delay >= 0;
+    }
+    manager.pushLog(`fallback probe ${group.tag}/${memberTag} failed via clash-api for ${host}:${port}`);
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 function resetDownloadState() {

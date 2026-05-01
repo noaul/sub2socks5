@@ -14,6 +14,8 @@ const switchFormButton = document.getElementById('switch-form');
 const switchJsonButton = document.getElementById('switch-json');
 const tabButtons = [...document.querySelectorAll('.tab-button')];
 const manageNodesButton = document.getElementById('manage-nodes');
+const socksServicesEl = document.getElementById('socks-services');
+const addSocksServiceButton = document.getElementById('add-socks-service');
 const tabPanels = {
   overview: document.getElementById('tab-overview'),
   logs: document.getElementById('tab-logs')
@@ -45,11 +47,7 @@ const fields = {
   dnsStrategy: document.getElementById('field-dns-strategy'),
   dnsRemoteUrl: document.getElementById('field-dns-remote-url'),
   dnsBootstrap: document.getElementById('field-dns-bootstrap'),
-  routeFinal: document.getElementById('field-route-final'),
-  portListen: document.getElementById('field-port-listen'),
-  portNumber: document.getElementById('field-port-number'),
-  portTarget: document.getElementById('field-port-target'),
-  portSniff: document.getElementById('field-port-sniff')
+  routeFinal: document.getElementById('field-route-final')
 };
 
 const infoViews = {
@@ -79,6 +77,8 @@ let latestData = {
   download: null
 };
 let downloadInFlight = false;
+let formPorts = [];
+let isFormInteracting = false;
 
 async function load() {
   const [configData, generatedData, logsData, downloadData] = await Promise.all([
@@ -104,12 +104,11 @@ async function load() {
 
   const formattedConfig = JSON.stringify(configData.config, null, 2);
   const shouldReplaceEditor = !isEditorDirty() || editor.value.trim() === '' || editor.value === lastSavedConfigText;
-
   if (shouldReplaceEditor) {
     editor.value = formattedConfig;
   }
 
-  if (!formTouched && (!isFormDirty() || shouldReplaceEditor)) {
+  if (!isFormInteracting && !formTouched && (!isFormDirty() || shouldReplaceEditor)) {
     fillForm(configData.config);
   }
 
@@ -121,15 +120,11 @@ async function load() {
 function renderOverview() {
   nodesEl.textContent = JSON.stringify(latestData.subscription, null, 2);
   runtimeEl.textContent = JSON.stringify(latestData.runtime, null, 2);
-  kernelEl.textContent = JSON.stringify(
-    {
-      ...latestData.kernel,
-      plannedKernel: latestData.plannedKernel,
-      releaseListCount: latestData.releaseList.length
-    },
-    null,
-    2
-  );
+  kernelEl.textContent = JSON.stringify({
+    ...latestData.kernel,
+    plannedKernel: latestData.plannedKernel,
+    releaseListCount: latestData.releaseList.length
+  }, null, 2);
   architectureEl.textContent = JSON.stringify(latestData.architecture, null, 2);
   generatedEl.textContent = JSON.stringify(latestData.generated, null, 2);
   logsEl.textContent = (latestData.logs?.logs || []).join('\n') || '暂无运行日志';
@@ -153,7 +148,9 @@ function renderOverview() {
   renderLogTimeline(forms.logs, latestData.logs?.logs || []);
   renderArchitectureSelector();
   renderKernelVersionOptions();
-  renderOutboundOptions();
+  if ((!formTouched && !isFormInteracting) || currentView !== 'form') {
+    renderSocksServices();
+  }
 }
 
 function renderArchitectureSelector() {
@@ -191,31 +188,54 @@ function renderKernelVersionOptions() {
   kernelSelectVersionButton.disabled = false;
 }
 
-function renderOutboundOptions() {
+function renderSocksServices() {
+  socksServicesEl.innerHTML = '';
+  if (!formPorts.length) {
+    socksServicesEl.innerHTML = '<div class="timeline-item"><div class="title">暂无 SOCKS5 服务</div></div>';
+    return;
+  }
+
+  for (const [index, portItem] of formPorts.entries()) {
+    const item = document.createElement('div');
+    item.className = 'timeline-item';
+    item.innerHTML = `
+      <div class="title">SOCKS5 服务 ${index + 1}</div>
+      <div class="form-grid">
+        <label>
+          <span>tag</span>
+          <input data-port-index="${index}" data-port-field="tag" value="${escapeHtmlAttr(portItem.tag || '')}" />
+        </label>
+        <label>
+          <span>监听地址</span>
+          <input data-port-index="${index}" data-port-field="listen" value="${escapeHtmlAttr(portItem.listen || '127.0.0.1')}" />
+        </label>
+        <label>
+          <span>端口</span>
+          <input data-port-index="${index}" data-port-field="port" type="number" min="1" step="1" value="${escapeHtmlAttr(String(portItem.port || ''))}" />
+        </label>
+        <label>
+          <span>目标出口</span>
+          <select data-port-index="${index}" data-port-field="target">
+            ${buildOutboundOptionsHtml(portItem.target)}
+          </select>
+        </label>
+      </div>
+      <div class="section-heading-actions">
+        <button type="button" data-remove-port="${index}" ${formPorts.length === 1 ? 'disabled' : ''}>删除</button>
+      </div>
+    `;
+    socksServicesEl.appendChild(item);
+  }
+}
+
+function buildOutboundOptionsHtml(selectedTag) {
   const outbounds = latestData.availableOutbounds?.length
     ? latestData.availableOutbounds
     : [{ tag: 'direct', label: 'direct', type: 'direct', source: 'builtin' }];
 
-  renderSelectOptions(fields.routeFinal, outbounds, latestData.config?.routing?.routeFinal || 'proxy');
-  renderSelectOptions(fields.portTarget, outbounds, latestData.config?.ports?.[0]?.target || 'proxy');
-}
-
-function renderSelectOptions(select, options, selected) {
-  const previous = select.value;
-  select.innerHTML = '';
-  for (const optionInfo of options) {
-    const option = document.createElement('option');
-    option.value = optionInfo.tag;
-    option.textContent = optionInfo.label || optionInfo.tag;
-    option.selected = optionInfo.tag === selected;
-    select.appendChild(option);
-  }
-  if (!select.value && options.some((item) => item.tag === previous)) {
-    select.value = previous;
-  }
-  if (!select.value && options[0]) {
-    select.value = options[0].tag;
-  }
+  return outbounds.map((optionInfo) => (
+    `<option value="${escapeHtmlAttr(optionInfo.tag)}" ${optionInfo.tag === selectedTag ? 'selected' : ''}>${escapeHtml(optionInfo.label || optionInfo.tag)}</option>`
+  )).join('');
 }
 
 async function post(path, body) {
@@ -242,9 +262,7 @@ async function api(path) {
 
 async function readResponseJson(response) {
   const text = await response.text();
-  if (!text) {
-    return {};
-  }
+  if (!text) return {};
   try {
     return JSON.parse(text);
   } catch {
@@ -341,20 +359,15 @@ function parseFormConfig(validateRequired = false) {
     next.dns.strategy = fields.dnsStrategy.value;
     next.dns.remoteUrl = fields.dnsRemoteUrl.value.trim();
     next.dns.bootstrapServer = fields.dnsBootstrap.value.trim();
-    next.routing.routeFinal = fields.routeFinal.value;
+    next.routing.routeFinal = fields.routeFinal.value || next.routing.routeFinal || 'proxy';
 
-    if (!Array.isArray(next.ports) || !next.ports.length) {
-      next.ports = [{}];
-    }
-
-    next.ports[0] = {
-      ...next.ports[0],
-      tag: next.ports[0].tag || 'default-socks',
-      listen: fields.portListen.value.trim(),
-      port: Number(fields.portNumber.value || 0),
-      target: fields.portTarget.value,
-      sniff: fields.portSniff.checked
-    };
+    next.ports = formPorts.map((item, index) => ({
+      tag: item.tag?.trim() || `socks-${index + 1}`,
+      listen: item.listen?.trim() || '127.0.0.1',
+      port: Number(item.port || 0),
+      target: item.target || next.routing.routeFinal || 'proxy',
+      sniff: true
+    }));
 
     if (validateRequired) {
       if (!next.subscription.url) throw new Error('订阅地址不能为空');
@@ -362,9 +375,22 @@ function parseFormConfig(validateRequired = false) {
       if (!Number.isInteger(next.app.port) || next.app.port <= 0) throw new Error('Web UI 端口无效');
       if (!next.app.singBoxBinary) throw new Error('sing-box 二进制路径不能为空');
       if (!next.routing.routeFinal) throw new Error('默认路由出口不能为空');
-      if (!next.ports[0].listen) throw new Error('SOCKS 监听地址不能为空');
-      if (!Number.isInteger(next.ports[0].port) || next.ports[0].port <= 0) throw new Error('SOCKS 端口无效');
-      if (!next.ports[0].target) throw new Error('SOCKS 目标出口不能为空');
+      if (!next.ports.length) throw new Error('至少需要一个 SOCKS5 服务');
+
+      const seenTags = new Set();
+      const seenPorts = new Set();
+      for (const portItem of next.ports) {
+        if (!portItem.tag) throw new Error('SOCKS5 服务 tag 不能为空');
+        if (seenTags.has(portItem.tag)) throw new Error(`SOCKS5 服务 tag 重复：${portItem.tag}`);
+        seenTags.add(portItem.tag);
+
+        if (!portItem.listen) throw new Error(`SOCKS5 服务 ${portItem.tag} 监听地址不能为空`);
+        if (!Number.isInteger(portItem.port) || portItem.port <= 0) throw new Error(`SOCKS5 服务 ${portItem.tag} 端口无效`);
+        if (seenPorts.has(`${portItem.listen}:${portItem.port}`)) throw new Error(`SOCKS5 服务监听重复：${portItem.listen}:${portItem.port}`);
+        seenPorts.add(`${portItem.listen}:${portItem.port}`);
+
+        if (!portItem.target) throw new Error(`SOCKS5 服务 ${portItem.tag} 目标出口不能为空`);
+      }
     }
 
     return { ok: true, value: next, text: JSON.stringify(next, null, 2) };
@@ -382,13 +408,43 @@ function fillForm(config) {
   fields.appLogLevel.value = config.app?.logLevel || 'info';
   fields.appAutoStart.checked = Boolean(config.app?.autoStart);
   fields.dnsStrategy.value = config.dns?.strategy || 'prefer_ipv4';
-  fields.dnsRemoteUrl.value = config.dns?.remoteUrl || 'https://1.1.1.1/dns-query';
+  fields.dnsRemoteUrl.value = config.dns?.remoteUrl || 'https://cloudflare-dns.com/dns-query';
   fields.dnsBootstrap.value = config.dns?.bootstrapServer || '223.5.5.5';
+  fields.routeFinal.value = config.routing?.routeFinal || 'proxy';
+  formPorts = normalizePorts(config.ports || []);
+}
 
-  const firstPort = config.ports?.[0] || {};
-  fields.portListen.value = firstPort.listen || '127.0.0.1';
-  fields.portNumber.value = firstPort.port || 1080;
-  fields.portSniff.checked = firstPort.sniff !== false;
+function normalizePorts(ports) {
+  if (!Array.isArray(ports) || !ports.length) {
+    return [createDefaultPort()];
+  }
+  return ports.map((item, index) => ({
+    tag: item.tag || `socks-${index + 1}`,
+    listen: item.listen || '127.0.0.1',
+    port: item.port || '',
+    target: item.target || 'proxy',
+    sniff: true
+  }));
+}
+
+function createDefaultPort() {
+  return {
+    tag: `socks-${formPorts.length + 1 || 1}`,
+    listen: '127.0.0.1',
+    port: '',
+    target: fields.routeFinal?.value || latestData.config?.routing?.routeFinal || 'proxy',
+    sniff: true
+  };
+}
+
+function markFormInteraction(active) {
+  isFormInteracting = active;
+}
+
+function isInteractiveFormElement(target) {
+  return target instanceof HTMLInputElement
+    || target instanceof HTMLSelectElement
+    || target instanceof HTMLTextAreaElement;
 }
 
 function isEditorDirty() {
@@ -412,6 +468,7 @@ function syncJsonToForm() {
   if (parsed.ok) {
     fillForm(parsed.value);
     formTouched = false;
+    renderSocksServices();
   }
   updateEditorState();
   return parsed;
@@ -554,6 +611,10 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
+function escapeHtmlAttr(value) {
+  return escapeHtml(value);
+}
+
 async function action(label, fn) {
   try {
     setBusy(true);
@@ -612,6 +673,7 @@ document.getElementById('save-config').onclick = () => action('保存配置', as
   lastSavedConfigText = validation.text;
   formTouched = false;
   fillForm(validation.value);
+  renderSocksServices();
   updateEditorState();
 });
 
@@ -661,6 +723,71 @@ manageNodesButton?.addEventListener('click', () => {
   window.location.href = '/nodes.html';
 });
 
+addSocksServiceButton?.addEventListener('click', () => {
+  formPorts.push(createDefaultPort());
+  renderSocksServices();
+  formTouched = true;
+  updateEditorState();
+});
+
+document.addEventListener('input', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
+
+  if (target.dataset.portIndex) {
+    const index = Number(target.dataset.portIndex);
+    const field = target.dataset.portField;
+    formPorts[index][field] = target.value;
+    formTouched = true;
+    markFormInteraction(true);
+    updateEditorState();
+  }
+});
+
+document.addEventListener('change', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
+
+  if (target.dataset.portIndex) {
+    const index = Number(target.dataset.portIndex);
+    const field = target.dataset.portField;
+    formPorts[index][field] = target.value;
+    formTouched = true;
+    markFormInteraction(true);
+    updateEditorState();
+  }
+});
+
+document.addEventListener('focusin', (event) => {
+  if (isInteractiveFormElement(event.target) && formView.contains(event.target)) {
+    markFormInteraction(true);
+  }
+});
+
+document.addEventListener('focusout', () => {
+  setTimeout(() => {
+    const active = document.activeElement;
+    if (!(active instanceof Element) || !formView.contains(active) || !isInteractiveFormElement(active)) {
+      markFormInteraction(false);
+    }
+  }, 0);
+});
+
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+
+  if (target.dataset.removePort) {
+    const index = Number(target.dataset.removePort);
+    if (formPorts.length > 1) {
+      formPorts.splice(index, 1);
+      renderSocksServices();
+      formTouched = true;
+      updateEditorState();
+    }
+  }
+});
+
 kernelArchSelect.addEventListener('change', () => {
   const [os, archName] = kernelArchSelect.value.split('-');
   latestData.architecture = {
@@ -683,10 +810,12 @@ for (const button of tabButtons) {
 for (const element of Object.values(fields)) {
   element?.addEventListener('input', () => {
     formTouched = true;
+    markFormInteraction(true);
     updateEditorState();
   });
   element?.addEventListener('change', () => {
     formTouched = true;
+    markFormInteraction(true);
     updateEditorState();
   });
 }
@@ -708,6 +837,11 @@ load()
   .catch((error) => setStatus(`初始化失败：${error.message}`, 'error'));
 
 setInterval(() => {
+  if (currentView === 'form' && (formTouched || isFormInteracting)) {
+    refreshAfterNodesUpdate().catch(() => {});
+    return;
+  }
+
   Promise.all([load(), refreshAfterNodesUpdate()])
     .then(() => {
       const downloading = syncStatusBarWithDownload(latestData.download);

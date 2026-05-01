@@ -68,6 +68,40 @@ export function parseSubscription(rawText, format = 'raw') {
   return { nodes, raw: rawText, warnings };
 }
 
+export function parseManualNodeInput(rawInput) {
+  const text = String(rawInput || '').trim();
+  if (!text) {
+    return { nodes: [], warnings: ['手动导入内容为空'] };
+  }
+
+  if (text.startsWith('{') || text.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(text);
+      const items = Array.isArray(parsed) ? parsed : [parsed];
+      const nodes = [];
+      const warnings = [];
+      for (const item of items) {
+        try {
+          const node = normalizeStructuredNode(item);
+          const validationError = validateNode(node);
+          if (validationError) {
+            warnings.push(`节点已跳过: ${validationError}`);
+            continue;
+          }
+          nodes.push(node);
+        } catch (error) {
+          warnings.push(`结构化节点解析失败: ${error.message}`);
+        }
+      }
+      return { nodes, warnings };
+    } catch {
+      return parseSubscription(text, 'raw');
+    }
+  }
+
+  return parseSubscription(text, 'raw');
+}
+
 function parseLine(line) {
   if (line.startsWith('ss://')) {
     return parseShadowsocks(line);
@@ -336,6 +370,22 @@ function decodeBase64Line(line) {
   }
 
   return '';
+}
+
+function normalizeStructuredNode(input) {
+  if (!input || typeof input !== 'object') {
+    throw new Error('结构化节点必须是对象');
+  }
+
+  if (typeof input.raw === 'string' && input.raw.trim()) {
+    return parseLine(sanitizeSubscriptionLine(input.raw.trim()));
+  }
+
+  if (!input.type) {
+    throw new Error('结构化节点缺少 type');
+  }
+
+  return structuredClone(input);
 }
 
 function normalizeBase64(value) {
