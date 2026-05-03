@@ -4,6 +4,11 @@ const groupsEl = document.getElementById('groups');
 const availableNodeListEl = document.getElementById('available-node-list');
 const manualNodeInputEl = document.getElementById('manual-node-input');
 const NODES_UPDATED_KEY = 'sub2socks5:nodes-updated-at';
+const GROUP_TEST_URL_PRESETS = [
+  'https://www.gstatic.com/generate_204',
+  'https://www.google.com/generate_204',
+  'https://cp.cloudflare.com/generate_204'
+];
 
 let state = {
   subscriptionNodes: [],
@@ -12,6 +17,8 @@ let state = {
   availableOutbounds: [],
   fallbackStates: {}
 };
+
+const expandedGroups = new Set();
 
 async function load() {
   const response = await fetch('/api/nodes');
@@ -24,9 +31,32 @@ async function load() {
 }
 
 function render() {
-  availableNodeListEl.textContent = JSON.stringify(state.availableOutbounds, null, 2);
+  renderAvailableNodes();
   renderManualNodes();
   renderGroups();
+}
+
+function renderAvailableNodes() {
+  const visibleNodes = state.availableOutbounds.filter((item) => !['proxy', 'auto', 'block'].includes(item.tag));
+  availableNodeListEl.innerHTML = '';
+
+  if (!visibleNodes.length) {
+    availableNodeListEl.innerHTML = '<div class="timeline-item"><div class="title">暂无节点</div></div>';
+    return;
+  }
+
+  for (const node of visibleNodes) {
+    const card = document.createElement('div');
+    card.className = 'node-pill';
+    card.innerHTML = `
+      <div class="node-pill-title">${escapeHtml(node.tag || '')}</div>
+      <div class="node-pill-tags">
+        <span class="node-pill-tag">${escapeHtml(node.type || '')}</span>
+        <span class="node-pill-tag is-source">${escapeHtml(sourceLabel(node.source))}</span>
+      </div>
+    `;
+    availableNodeListEl.appendChild(card);
+  }
 }
 
 function renderManualNodes() {
@@ -68,6 +98,13 @@ function renderGroups() {
 
   for (const [index, group] of state.groups.entries()) {
     const fallbackState = state.fallbackStates?.[group.tag] || null;
+    const expanded = expandedGroups.has(index);
+    const selectedMembers = Array.isArray(group.members) ? group.members : [];
+    const summaryCards = selectedMembers.map((memberTag) => {
+      const node = selectableNodes.find((item) => item.tag === memberTag);
+      return node ? renderNodePill(node) : '';
+    }).join('');
+
     const statusHtml = group.strategy === 'fallback'
       ? `
         <div class="kv-grid">
@@ -84,37 +121,57 @@ function renderGroups() {
       : '';
 
     const item = document.createElement('div');
-    item.className = 'timeline-item';
+    item.className = 'timeline-item group-panel';
     item.innerHTML = `
-      <div class="title">节点组 ${index + 1}</div>
-      <div class="form-grid">
-        <label><span>tag</span><input data-kind="group" data-index="${index}" data-field="tag" value="${escapeHtmlAttr(group.tag || '')}" /></label>
-        <label>
-          <span>策略</span>
-          <select data-kind="group" data-index="${index}" data-field="strategy">
-            <option value="urltest" ${group.strategy === 'urltest' ? 'selected' : ''}>urltest</option>
-            <option value="fallback" ${group.strategy === 'fallback' ? 'selected' : ''}>fallback</option>
-          </select>
-        </label>
-        <label>
-          <span>测试地址</span>
-          <input data-kind="group" data-index="${index}" data-field="url" value="${escapeHtmlAttr(group.url || 'https://www.gstatic.com/generate_204')}" />
-        </label>
-        <label>
-          <span>测试间隔</span>
-          <input data-kind="group" data-index="${index}" data-field="interval" value="${escapeHtmlAttr(group.interval || '10m')}" />
-        </label>
-        <label>
-          <span>超时毫秒</span>
-          <input data-kind="group" data-index="${index}" data-field="timeoutMs" type="number" min="1000" step="500" value="${escapeHtmlAttr(String(group.timeoutMs || 5000))}" />
-        </label>
+      <div class="group-panel-header">
+        <div>
+          <div class="title">${escapeHtml(group.tag || `节点组 ${index + 1}`)}</div>
+          <div class="node-pill-tags">
+            <span class="node-pill-tag">${escapeHtml(group.strategy || 'urltest')}</span>
+            <span class="node-pill-tag is-source">${selectedMembers.length} 个节点</span>
+          </div>
+        </div>
+        <button type="button" class="group-toggle" data-toggle-group="${index}">${expanded ? '收起' : '展开'}</button>
       </div>
-      ${statusHtml}
-      <div class="member-selector" data-group-members="${index}">
-        ${renderGroupMembers(index, group, selectableNodes)}
+      <div class="node-pill-grid group-summary">
+        ${summaryCards || '<div class="timeline-item"><div class="title">暂无成员</div></div>'}
       </div>
-      <div class="section-heading-actions">
-        <button type="button" data-remove-group="${index}">删除</button>
+      <div class="group-panel-body ${expanded ? '' : 'is-hidden'}" data-group-body="${index}">
+        <div class="form-grid">
+          <label><span>tag</span><input data-kind="group" data-index="${index}" data-field="tag" value="${escapeHtmlAttr(group.tag || '')}" /></label>
+          <label>
+            <span>策略</span>
+            <select data-kind="group" data-index="${index}" data-field="strategy">
+              <option value="urltest" ${group.strategy === 'urltest' ? 'selected' : ''}>urltest</option>
+              <option value="fallback" ${group.strategy === 'fallback' ? 'selected' : ''}>fallback</option>
+            </select>
+          </label>
+          <label>
+            <span>测试地址</span>
+            <select data-kind="group-preset" data-index="${index}" data-field="urlPreset">
+              ${buildGroupUrlPresetOptions(group.url)}
+            </select>
+          </label>
+          <label>
+            <span>测试间隔</span>
+            <input data-kind="group" data-index="${index}" data-field="interval" value="${escapeHtmlAttr(group.interval || '10m')}" />
+          </label>
+          <label>
+            <span>超时毫秒</span>
+            <input data-kind="group" data-index="${index}" data-field="timeoutMs" type="number" min="1000" step="500" value="${escapeHtmlAttr(String(group.timeoutMs || 5000))}" />
+          </label>
+          <label class="${GROUP_TEST_URL_PRESETS.includes(group.url) ? 'is-hidden' : ''}">
+            <span>自定义测试地址</span>
+            <input data-kind="group" data-index="${index}" data-field="url" value="${escapeHtmlAttr(group.url || 'https://www.gstatic.com/generate_204')}" />
+          </label>
+        </div>
+        ${statusHtml}
+        <div class="member-selector" data-group-members="${index}">
+          ${renderGroupMembers(index, group, selectableNodes)}
+        </div>
+        <div class="section-heading-actions">
+          <button type="button" data-remove-group="${index}">删除</button>
+        </div>
       </div>
     `;
     groupsEl.appendChild(item);
@@ -149,8 +206,36 @@ function buildMemberOptions(selectableNodes, selectedTags, currentTag) {
     .join('');
 }
 
+function buildGroupUrlPresetOptions(currentUrl) {
+  const preset = GROUP_TEST_URL_PRESETS.includes(currentUrl) ? currentUrl : 'custom';
+  return [
+    ...GROUP_TEST_URL_PRESETS.map((url) => `<option value="${escapeHtmlAttr(url)}" ${preset === url ? 'selected' : ''}>${escapeHtml(url)}</option>`),
+    `<option value="custom" ${preset === 'custom' ? 'selected' : ''}>自定义</option>`
+  ].join('');
+}
+
 function getSelectableNodes() {
   return state.availableOutbounds.filter((item) => !['proxy', 'auto', 'block'].includes(item.tag));
+}
+
+function renderNodePill(node) {
+  return `
+    <div class="node-pill">
+      <div class="node-pill-title">${escapeHtml(node.tag || '')}</div>
+      <div class="node-pill-tags">
+        <span class="node-pill-tag">${escapeHtml(node.type || '')}</span>
+        <span class="node-pill-tag is-source">${escapeHtml(sourceLabel(node.source))}</span>
+      </div>
+    </div>
+  `;
+}
+
+function sourceLabel(source) {
+  if (source === 'subscription') return '订阅';
+  if (source === 'manual') return '手动';
+  if (source === 'group') return '节点组';
+  if (source === 'builtin') return '内置';
+  return source || '';
 }
 
 function setStatus(message, kind = 'idle') {
@@ -189,6 +274,7 @@ document.getElementById('import-manual-nodes').addEventListener('click', async (
     state.manualNodes.push(...(data.nodes || []));
     manualNodeInputEl.value = '';
     renderManualNodes();
+    renderAvailableNodes();
     setStatus(`成功导入 ${data.nodes?.length || 0} 个节点`, 'success');
   } catch (error) {
     setStatus(error.message, 'error');
@@ -204,6 +290,7 @@ document.getElementById('add-group').addEventListener('click', () => {
     timeoutMs: 5000,
     members: []
   });
+  expandedGroups.add(state.groups.length - 1);
   renderGroups();
 });
 
@@ -245,6 +332,14 @@ document.addEventListener('input', (event) => {
     state.groups[index][field] = field === 'timeoutMs' ? Number(target.value || 0) : target.value;
   }
 
+  if (target.dataset.kind === 'group-preset') {
+    const index = Number(target.dataset.index);
+    if (target.value !== 'custom') {
+      state.groups[index].url = target.value;
+    }
+    renderGroups();
+  }
+
   if (target.dataset.groupMemberSelect) {
     const groupIndex = Number(target.dataset.groupMemberSelect);
     const memberIndex = Number(target.dataset.memberIndex);
@@ -257,13 +352,29 @@ document.addEventListener('click', (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
 
+  if (target.dataset.toggleGroup) {
+    const groupIndex = Number(target.dataset.toggleGroup);
+    if (expandedGroups.has(groupIndex)) {
+      expandedGroups.delete(groupIndex);
+    } else {
+      expandedGroups.add(groupIndex);
+    }
+    renderGroups();
+  }
+
   if (target.dataset.removeManual) {
     state.manualNodes.splice(Number(target.dataset.removeManual), 1);
     renderManualNodes();
+    renderAvailableNodes();
   }
 
   if (target.dataset.removeGroup) {
-    state.groups.splice(Number(target.dataset.removeGroup), 1);
+    const index = Number(target.dataset.removeGroup);
+    state.groups.splice(index, 1);
+    expandedGroups.delete(index);
+    const next = [...expandedGroups].map((item) => (item > index ? item - 1 : item));
+    expandedGroups.clear();
+    for (const itemIndex of next) expandedGroups.add(itemIndex);
     renderGroups();
   }
 

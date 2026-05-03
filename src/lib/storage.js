@@ -31,6 +31,7 @@ export const defaultConfig = {
   },
   subscription: {
     url: '',
+    urls: [],
     format: 'raw',
     userAgent: 'sub2socks5/0.1.0',
     refreshIntervalMinutes: 60,
@@ -38,6 +39,7 @@ export const defaultConfig = {
   },
   dns: {
     strategy: 'prefer_ipv4',
+    remotePreset: 'cloudflare',
     remoteUrl: 'https://cloudflare-dns.com/dns-query',
     bootstrapServer: '223.5.5.5',
     servers: [
@@ -244,6 +246,19 @@ function mergeDefaults(base, value) {
 
 function migrateConfig(config) {
   config.dns ||= {};
+  config.subscription ||= {};
+  if (!Array.isArray(config.subscription.urls)) {
+    config.subscription.urls = [];
+  }
+  if (!config.subscription.urls.length && config.subscription.url) {
+    config.subscription.urls = [config.subscription.url];
+  }
+  if (!config.subscription.url && config.subscription.urls.length) {
+    config.subscription.url = config.subscription.urls[0];
+  }
+  if (!config.dns.remotePreset || inferDnsPreset(config.dns.remoteUrl) !== config.dns.remotePreset) {
+    config.dns.remotePreset = inferDnsPreset(config.dns.remoteUrl);
+  }
   if (!config.dns.remoteUrl) {
     config.dns.remoteUrl = deriveRemoteDnsUrl(config.dns.servers);
   }
@@ -259,7 +274,23 @@ function migrateConfig(config) {
   if (Array.isArray(config?.dns?.rules)) {
     config.dns.rules = config.dns.rules.map(migrateDnsRule).filter(Boolean);
   }
+  if (config.dns.final === 'dns-remote') {
+    config.dns.final = 'dns-remote-default';
+  }
+  if (config.dns.defaultDomainResolver === 'dns-remote') {
+    config.dns.defaultDomainResolver = 'dns-bootstrap';
+  }
   return config;
+}
+
+function inferDnsPreset(remoteUrl = '') {
+  if (remoteUrl === 'https://dns.google/dns-query') {
+    return 'google';
+  }
+  if (remoteUrl === 'https://cloudflare-dns.com/dns-query') {
+    return 'cloudflare';
+  }
+  return 'custom';
 }
 
 function migrateDnsServer(server) {

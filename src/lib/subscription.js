@@ -10,20 +10,38 @@ const supportedSchemes = new Set([
 ]);
 
 export async function fetchSubscription(subscription) {
-  if (!subscription.url) {
+  const urls = normalizeSubscriptionUrls(subscription);
+  if (!urls.length) {
     return { nodes: [], raw: '', warnings: ['订阅地址为空'] };
   }
-  const response = await fetch(subscription.url, {
-    headers: {
-      'user-agent': subscription.userAgent || 'sub2socks5/0.1.0',
-      ...normalizeHeaders(subscription.headers)
+
+  const allNodes = [];
+  const warnings = [];
+  const rawList = [];
+
+  for (const url of urls) {
+    const response = await fetch(url, {
+      headers: {
+        'user-agent': subscription.userAgent || 'sub2socks5/0.1.0',
+        ...normalizeHeaders(subscription.headers)
+      }
+    });
+    if (!response.ok) {
+      warnings.push(`订阅拉取失败: ${url} HTTP ${response.status}`);
+      continue;
     }
-  });
-  if (!response.ok) {
-    throw new Error(`拉取订阅失败: HTTP ${response.status}`);
+    const rawText = await response.text();
+    const parsed = parseSubscription(rawText, subscription.format);
+    rawList.push(`### ${url}\n${rawText}`);
+    allNodes.push(...(parsed.nodes || []));
+    warnings.push(...(parsed.warnings || []).map((item) => `[${url}] ${item}`));
   }
-  const rawText = await response.text();
-  return parseSubscription(rawText, subscription.format);
+
+  return {
+    nodes: dedupeNodes(allNodes),
+    raw: rawList.join('\n\n'),
+    warnings
+  };
 }
 
 export function parseSubscription(rawText, format = 'raw') {
@@ -432,6 +450,28 @@ function normalizeHeaders(headers) {
     return {};
   }
   return Object.fromEntries(Object.entries(headers).filter(([, value]) => value !== ''));
+}
+
+function normalizeSubscriptionUrls(subscription) {
+  const urls = Array.isArray(subscription?.urls) ? subscription.urls : [];
+  const normalized = urls.map((item) => String(item || '').trim()).filter(Boolean);
+  if (normalized.length) {
+    return normalized;
+  }
+  const single = String(subscription?.url || '').trim();
+  return single ? [single] : [];
+}
+
+function dedupeNodes(nodes) {
+  const seen = new Set();
+  const result = [];
+  for (const node of nodes) {
+    const key = `${node.type}::${node.tag}::${node.server}::${node.server_port}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(node);
+  }
+  return result;
 }
 
 function getScheme(line) {

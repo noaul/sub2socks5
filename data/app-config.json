@@ -3,11 +3,14 @@
     "host": "127.0.0.1",
     "port": 18080,
     "singBoxBinary": "D:\\sub2socks5\\bin\\sing-box.exe",
-    "autoStart": false,
+    "autoStart": true,
     "logLevel": "info"
   },
   "subscription": {
     "url": "https://app.mitce.net/?sid=90177&token=74169fd33b7e037cc568",
+    "urls": [
+      "https://app.mitce.net/?sid=90177&token=74169fd33b7e037cc568"
+    ],
     "format": "raw",
     "userAgent": "sub2socks5/0.1.0",
     "refreshIntervalMinutes": 60,
@@ -15,6 +18,9 @@
   },
   "dns": {
     "strategy": "prefer_ipv4",
+    "remotePreset": "google",
+    "remoteUrl": "https://dns.google/dns-query",
+    "bootstrapServer": "1.1.1.1",
     "servers": [
       {
         "tag": "dns-remote",
@@ -33,7 +39,7 @@
         "server": "dns-direct"
       }
     ],
-    "final": "dns-remote",
+    "final": "dns-remote-default",
     "independentCache": true,
     "disableCache": false,
     "disableExpire": false
@@ -48,12 +54,34 @@
       }
     ]
   },
+  "nodeRegistry": {
+    "manualNodes": [],
+    "groups": [
+      {
+        "tag": "sg",
+        "strategy": "urltest",
+        "url": "https://www.gstatic.com/generate_204",
+        "interval": "10m",
+        "timeoutMs": 5000,
+        "members": [
+          "SG-1",
+          "SG-2",
+          "SG-3",
+          "SG1-HY2",
+          "SG2-HY2"
+        ]
+      }
+    ]
+  },
+  "runtimeState": {
+    "fallbackGroups": {}
+  },
   "ports": [
     {
       "tag": "default-socks",
       "listen": "127.0.0.1",
       "port": 53456,
-      "target": "proxy",
+      "target": "sg",
       "sniff": true
     }
   ]

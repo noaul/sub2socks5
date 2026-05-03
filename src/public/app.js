@@ -7,7 +7,10 @@ const architectureEl = document.getElementById('architecture');
 const logsEl = document.getElementById('logs');
 const statusBar = document.getElementById('status-bar');
 const editorStatus = document.getElementById('editor-status');
-const actionButtons = [...document.querySelectorAll('.actions button'), ...document.querySelectorAll('.section-heading-actions button')];
+const actionButtons = [
+  ...document.querySelectorAll('.actions button'),
+  ...document.querySelectorAll('.section-heading-actions button')
+];
 const formView = document.getElementById('form-view');
 const jsonView = document.getElementById('json-view');
 const switchFormButton = document.getElementById('switch-form');
@@ -16,16 +19,26 @@ const tabButtons = [...document.querySelectorAll('.tab-button')];
 const manageNodesButton = document.getElementById('manage-nodes');
 const socksServicesEl = document.getElementById('socks-services');
 const addSocksServiceButton = document.getElementById('add-socks-service');
+const subscriptionUrlsEl = document.getElementById('subscription-urls');
+const addSubscriptionUrlButton = document.getElementById('add-subscription-url');
+const kernelVersionSelect = document.getElementById('kernel-version-select');
+const kernelSelectVersionButton = document.getElementById('kernel-select-version');
+const kernelArchSelect = document.getElementById('kernel-arch-select');
+const kernelCheckUpdatesButton = document.getElementById('kernel-check-updates');
+const dnsRemoteUrlWrap = document.getElementById('field-dns-remote-url-wrap');
+const dnsBootstrapWrap = document.getElementById('field-dns-bootstrap-wrap');
+
 const tabPanels = {
   overview: document.getElementById('tab-overview'),
   logs: document.getElementById('tab-logs')
 };
 
-const kernelVersionSelect = document.getElementById('kernel-version-select');
-const kernelSelectVersionButton = document.getElementById('kernel-select-version');
-const kernelArchSelect = document.getElementById('kernel-arch-select');
-const kernelCheckUpdatesButton = document.getElementById('kernel-check-updates');
 const NODES_UPDATED_KEY = 'sub2socks5:nodes-updated-at';
+const DNS_PRESET_URLS = {
+  google: 'https://dns.google/dns-query',
+  cloudflare: 'https://cloudflare-dns.com/dns-query'
+};
+const DNS_BOOTSTRAP_PRESETS = ['1.1.1.1', '8.8.8.8', '223.5.5.5'];
 
 const forms = {
   architecture: document.getElementById('architecture-form'),
@@ -37,15 +50,15 @@ const forms = {
 };
 
 const fields = {
-  subscriptionUrl: document.getElementById('field-subscription-url'),
-  subscriptionFormat: document.getElementById('field-subscription-format'),
   appHost: document.getElementById('field-app-host'),
   appPort: document.getElementById('field-app-port'),
   appBinary: document.getElementById('field-app-binary'),
   appLogLevel: document.getElementById('field-app-log-level'),
   appAutoStart: document.getElementById('field-app-auto-start'),
   dnsStrategy: document.getElementById('field-dns-strategy'),
+  dnsRemotePreset: document.getElementById('field-dns-remote-preset'),
   dnsRemoteUrl: document.getElementById('field-dns-remote-url'),
+  dnsBootstrapPreset: document.getElementById('field-dns-bootstrap-preset'),
   dnsBootstrap: document.getElementById('field-dns-bootstrap'),
   routeFinal: document.getElementById('field-route-final')
 };
@@ -78,6 +91,7 @@ let latestData = {
 };
 let downloadInFlight = false;
 let formPorts = [];
+let formSubscriptionUrls = [];
 let isFormInteracting = false;
 
 async function load() {
@@ -119,7 +133,7 @@ async function load() {
 
 function renderOverview() {
   nodesEl.textContent = JSON.stringify(latestData.subscription, null, 2);
-  runtimeEl.textContent = JSON.stringify(latestData.runtime, null, 2);
+  runtimeEl.textContent = (latestData.runtime?.logs || []).join('\n') || '暂无运行日志';
   kernelEl.textContent = JSON.stringify({
     ...latestData.kernel,
     plannedKernel: latestData.plannedKernel,
@@ -148,7 +162,10 @@ function renderOverview() {
   renderLogTimeline(forms.logs, latestData.logs?.logs || []);
   renderArchitectureSelector();
   renderKernelVersionOptions();
+  renderRouteFinalOptions();
+  renderDnsPresetUi();
   if ((!formTouched && !isFormInteracting) || currentView !== 'form') {
+    renderSubscriptionUrls();
     renderSocksServices();
   }
 }
@@ -188,8 +205,53 @@ function renderKernelVersionOptions() {
   kernelSelectVersionButton.disabled = false;
 }
 
+function renderRouteFinalOptions() {
+  const selectedTag = latestData.config?.routing?.routeFinal || fields.routeFinal.value || 'proxy';
+  fields.routeFinal.innerHTML = buildOutboundOptionsHtml(selectedTag);
+  fields.routeFinal.value = selectedTag;
+}
+
+function renderDnsPresetUi() {
+  const preset = fields.dnsRemotePreset.value || 'cloudflare';
+  const custom = preset === 'custom';
+  dnsRemoteUrlWrap.classList.toggle('is-hidden', !custom);
+  fields.dnsRemoteUrl.disabled = !custom;
+
+  const bootstrapPreset = fields.dnsBootstrapPreset.value || '223.5.5.5';
+  const bootstrapCustom = bootstrapPreset === 'custom';
+  dnsBootstrapWrap.classList.toggle('is-hidden', !bootstrapCustom);
+  fields.dnsBootstrap.disabled = !bootstrapCustom;
+}
+
+function renderSubscriptionUrls() {
+  subscriptionUrlsEl.innerHTML = '';
+  if (!formSubscriptionUrls.length) {
+    subscriptionUrlsEl.innerHTML = '<div class="timeline-item"><div class="title">暂无订阅地址</div></div>';
+    return;
+  }
+
+  for (const [index, item] of formSubscriptionUrls.entries()) {
+    const block = document.createElement('div');
+    block.className = 'timeline-item';
+    block.innerHTML = `
+      <div class="title">订阅地址 ${index + 1}</div>
+      <div class="form-grid">
+        <label>
+          <span>URL</span>
+          <input data-subscription-index="${index}" data-subscription-field="url" value="${escapeHtmlAttr(item.url || '')}" />
+        </label>
+      </div>
+      <div class="section-heading-actions">
+        ${formSubscriptionUrls.length > 1 ? `<button type="button" data-remove-subscription="${index}">删除</button>` : ''}
+      </div>
+    `;
+    subscriptionUrlsEl.appendChild(block);
+  }
+}
+
 function renderSocksServices() {
   socksServicesEl.innerHTML = '';
+
   if (!formPorts.length) {
     socksServicesEl.innerHTML = '<div class="timeline-item"><div class="title">暂无 SOCKS5 服务</div></div>';
     return;
@@ -221,7 +283,7 @@ function renderSocksServices() {
         </label>
       </div>
       <div class="section-heading-actions">
-        <button type="button" data-remove-port="${index}" ${formPorts.length === 1 ? 'disabled' : ''}>删除</button>
+        ${formPorts.length > 1 ? `<button type="button" data-remove-port="${index}">删除</button>` : ''}
       </div>
     `;
     socksServicesEl.appendChild(item);
@@ -233,9 +295,11 @@ function buildOutboundOptionsHtml(selectedTag) {
     ? latestData.availableOutbounds
     : [{ tag: 'direct', label: 'direct', type: 'direct', source: 'builtin' }];
 
-  return outbounds.map((optionInfo) => (
-    `<option value="${escapeHtmlAttr(optionInfo.tag)}" ${optionInfo.tag === selectedTag ? 'selected' : ''}>${escapeHtml(optionInfo.label || optionInfo.tag)}</option>`
-  )).join('');
+  return outbounds
+    .map((optionInfo) => (
+      `<option value="${escapeHtmlAttr(optionInfo.tag)}" ${optionInfo.tag === selectedTag ? 'selected' : ''}>${escapeHtml(optionInfo.label || optionInfo.tag)}</option>`
+    ))
+    .join('');
 }
 
 async function post(path, body) {
@@ -349,16 +413,22 @@ function parseFormConfig(validateRequired = false) {
     next.routing ||= {};
     next.nodeRegistry ||= { manualNodes: [], groups: [] };
 
-    next.subscription.url = fields.subscriptionUrl.value.trim();
-    next.subscription.format = fields.subscriptionFormat.value;
+    next.subscription.urls = formSubscriptionUrls.map((item) => item.url.trim()).filter(Boolean);
+    next.subscription.url = next.subscription.urls[0] || '';
+    next.subscription.format = next.subscription.format || 'raw';
     next.app.host = fields.appHost.value.trim();
     next.app.port = Number(fields.appPort.value || 0);
     next.app.singBoxBinary = fields.appBinary.value.trim();
     next.app.logLevel = fields.appLogLevel.value;
     next.app.autoStart = fields.appAutoStart.checked;
     next.dns.strategy = fields.dnsStrategy.value;
-    next.dns.remoteUrl = fields.dnsRemoteUrl.value.trim();
-    next.dns.bootstrapServer = fields.dnsBootstrap.value.trim();
+    next.dns.remotePreset = fields.dnsRemotePreset.value;
+    next.dns.remoteUrl = fields.dnsRemotePreset.value === 'custom'
+      ? fields.dnsRemoteUrl.value.trim()
+      : DNS_PRESET_URLS[fields.dnsRemotePreset.value] || DNS_PRESET_URLS.cloudflare;
+    next.dns.bootstrapServer = fields.dnsBootstrapPreset.value === 'custom'
+      ? fields.dnsBootstrap.value.trim()
+      : fields.dnsBootstrapPreset.value;
     next.routing.routeFinal = fields.routeFinal.value || next.routing.routeFinal || 'proxy';
 
     next.ports = formPorts.map((item, index) => ({
@@ -370,12 +440,19 @@ function parseFormConfig(validateRequired = false) {
     }));
 
     if (validateRequired) {
-      if (!next.subscription.url) throw new Error('订阅地址不能为空');
+      if (!next.subscription.urls.length) throw new Error('至少需要一个订阅地址');
       if (!next.app.host) throw new Error('Web UI 监听地址不能为空');
       if (!Number.isInteger(next.app.port) || next.app.port <= 0) throw new Error('Web UI 端口无效');
       if (!next.app.singBoxBinary) throw new Error('sing-box 二进制路径不能为空');
       if (!next.routing.routeFinal) throw new Error('默认路由出口不能为空');
       if (!next.ports.length) throw new Error('至少需要一个 SOCKS5 服务');
+      if (!next.dns.remoteUrl) throw new Error('DoH 地址不能为空');
+
+      const seenSubUrls = new Set();
+      for (const url of next.subscription.urls) {
+        if (seenSubUrls.has(url)) throw new Error(`订阅地址重复：${url}`);
+        seenSubUrls.add(url);
+      }
 
       const seenTags = new Set();
       const seenPorts = new Set();
@@ -386,7 +463,9 @@ function parseFormConfig(validateRequired = false) {
 
         if (!portItem.listen) throw new Error(`SOCKS5 服务 ${portItem.tag} 监听地址不能为空`);
         if (!Number.isInteger(portItem.port) || portItem.port <= 0) throw new Error(`SOCKS5 服务 ${portItem.tag} 端口无效`);
-        if (seenPorts.has(`${portItem.listen}:${portItem.port}`)) throw new Error(`SOCKS5 服务监听重复：${portItem.listen}:${portItem.port}`);
+        if (seenPorts.has(`${portItem.listen}:${portItem.port}`)) {
+          throw new Error(`SOCKS5 服务监听重复：${portItem.listen}:${portItem.port}`);
+        }
         seenPorts.add(`${portItem.listen}:${portItem.port}`);
 
         if (!portItem.target) throw new Error(`SOCKS5 服务 ${portItem.tag} 目标出口不能为空`);
@@ -400,24 +479,32 @@ function parseFormConfig(validateRequired = false) {
 }
 
 function fillForm(config) {
-  fields.subscriptionUrl.value = config.subscription?.url || '';
-  fields.subscriptionFormat.value = config.subscription?.format || 'raw';
+  const urls = Array.isArray(config.subscription?.urls) && config.subscription.urls.length
+    ? config.subscription.urls
+    : (config.subscription?.url ? [config.subscription.url] : ['']);
+
+  formSubscriptionUrls = urls.map((url) => ({ url }));
   fields.appHost.value = config.app?.host || '127.0.0.1';
   fields.appPort.value = config.app?.port || 18080;
   fields.appBinary.value = config.app?.singBoxBinary || '';
   fields.appLogLevel.value = config.app?.logLevel || 'info';
   fields.appAutoStart.checked = Boolean(config.app?.autoStart);
   fields.dnsStrategy.value = config.dns?.strategy || 'prefer_ipv4';
-  fields.dnsRemoteUrl.value = config.dns?.remoteUrl || 'https://cloudflare-dns.com/dns-query';
+  fields.dnsRemotePreset.value = config.dns?.remotePreset || inferDnsPreset(config.dns?.remoteUrl);
+  fields.dnsRemoteUrl.value = config.dns?.remoteUrl || DNS_PRESET_URLS.cloudflare;
+  fields.dnsBootstrapPreset.value = inferBootstrapPreset(config.dns?.bootstrapServer);
   fields.dnsBootstrap.value = config.dns?.bootstrapServer || '223.5.5.5';
-  fields.routeFinal.value = config.routing?.routeFinal || 'proxy';
   formPorts = normalizePorts(config.ports || []);
+  renderRouteFinalOptions();
+  fields.routeFinal.value = config.routing?.routeFinal || 'proxy';
+  renderDnsPresetUi();
 }
 
 function normalizePorts(ports) {
   if (!Array.isArray(ports) || !ports.length) {
     return [createDefaultPort()];
   }
+
   return ports.map((item, index) => ({
     tag: item.tag || `socks-${index + 1}`,
     listen: item.listen || '127.0.0.1',
@@ -435,6 +522,20 @@ function createDefaultPort() {
     target: fields.routeFinal?.value || latestData.config?.routing?.routeFinal || 'proxy',
     sniff: true
   };
+}
+
+function createDefaultSubscriptionUrl() {
+  return { url: '' };
+}
+
+function inferDnsPreset(remoteUrl = '') {
+  if (remoteUrl === DNS_PRESET_URLS.google) return 'google';
+  if (remoteUrl === DNS_PRESET_URLS.cloudflare) return 'cloudflare';
+  return 'custom';
+}
+
+function inferBootstrapPreset(value = '') {
+  return DNS_BOOTSTRAP_PRESETS.includes(value) ? value : 'custom';
 }
 
 function markFormInteraction(active) {
@@ -468,6 +569,7 @@ function syncJsonToForm() {
   if (parsed.ok) {
     fillForm(parsed.value);
     formTouched = false;
+    renderSubscriptionUrls();
     renderSocksServices();
   }
   updateEditorState();
@@ -539,6 +641,7 @@ function renderTimeline(container, items) {
     container.appendChild(empty);
     return;
   }
+
   for (const item of items.slice().reverse()) {
     const node = document.createElement('div');
     node.className = 'timeline-item';
@@ -673,16 +776,14 @@ document.getElementById('save-config').onclick = () => action('保存配置', as
   lastSavedConfigText = validation.text;
   formTouched = false;
   fillForm(validation.value);
+  renderSubscriptionUrls();
   renderSocksServices();
   updateEditorState();
+  setStatus('配置已保存并自动更新 sing-box 配置', 'success');
 });
 
 document.getElementById('refresh-sub').onclick = () => action('更新订阅', async () => {
   await post('/api/subscription/refresh');
-});
-
-document.getElementById('generate').onclick = () => action('生成配置', async () => {
-  await post('/api/runtime/generate');
 });
 
 document.getElementById('start').onclick = () => action('启动 sing-box', async () => {
@@ -723,6 +824,13 @@ manageNodesButton?.addEventListener('click', () => {
   window.location.href = '/nodes.html';
 });
 
+addSubscriptionUrlButton?.addEventListener('click', () => {
+  formSubscriptionUrls.push(createDefaultSubscriptionUrl());
+  renderSubscriptionUrls();
+  formTouched = true;
+  updateEditorState();
+});
+
 addSocksServiceButton?.addEventListener('click', () => {
   formPorts.push(createDefaultPort());
   renderSocksServices();
@@ -738,6 +846,14 @@ document.addEventListener('input', (event) => {
     const index = Number(target.dataset.portIndex);
     const field = target.dataset.portField;
     formPorts[index][field] = target.value;
+    formTouched = true;
+    markFormInteraction(true);
+    updateEditorState();
+  }
+
+  if (target.dataset.subscriptionIndex) {
+    const index = Number(target.dataset.subscriptionIndex);
+    formSubscriptionUrls[index].url = target.value;
     formTouched = true;
     markFormInteraction(true);
     updateEditorState();
@@ -786,6 +902,16 @@ document.addEventListener('click', (event) => {
       updateEditorState();
     }
   }
+
+  if (target.dataset.removeSubscription) {
+    const index = Number(target.dataset.removeSubscription);
+    if (formSubscriptionUrls.length > 1) {
+      formSubscriptionUrls.splice(index, 1);
+      renderSubscriptionUrls();
+      formTouched = true;
+      updateEditorState();
+    }
+  }
 });
 
 kernelArchSelect.addEventListener('change', () => {
@@ -797,6 +923,24 @@ kernelArchSelect.addEventListener('change', () => {
     assetSuffix: kernelArchSelect.value
   };
   renderArchitectureSelector();
+});
+
+fields.dnsRemotePreset.addEventListener('change', () => {
+  if (fields.dnsRemotePreset.value !== 'custom') {
+    fields.dnsRemoteUrl.value = DNS_PRESET_URLS[fields.dnsRemotePreset.value] || DNS_PRESET_URLS.cloudflare;
+  }
+  renderDnsPresetUi();
+  formTouched = true;
+  updateEditorState();
+});
+
+fields.dnsBootstrapPreset.addEventListener('change', () => {
+  if (fields.dnsBootstrapPreset.value !== 'custom') {
+    fields.dnsBootstrap.value = fields.dnsBootstrapPreset.value;
+  }
+  renderDnsPresetUi();
+  formTouched = true;
+  updateEditorState();
 });
 
 switchFormButton.addEventListener('click', () => switchView('form'));

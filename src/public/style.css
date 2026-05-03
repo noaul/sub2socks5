@@ -212,10 +212,32 @@ button:disabled {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 14px;
 }
+.form-grid-basic {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
 .form-grid label {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.form-grid-basic > label {
+  min-width: 0;
+}
+.form-row-2 {
+  grid-row: 2;
+}
+.form-row-3 {
+  grid-row: 3;
+}
+.form-row-custom {
+  grid-column: 1 / -1;
+  grid-row: 4;
+}
+.checkbox-field {
+  justify-content: center;
+}
+.checkbox-field input[type='checkbox'] {
+  margin-top: 6px;
 }
 .field-with-action {
   grid-column: span 2;
@@ -235,6 +257,9 @@ button:disabled {
 .form-note {
   margin: 14px 0 0;
   color: #b6c6ef;
+}
+.is-hidden {
+  display: none !important;
 }
 .socks-services-heading {
   margin-top: 18px;
@@ -317,8 +342,68 @@ button:disabled {
 .member-remove {
   background: #de5b6d;
 }
+.node-pill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.node-pill {
+  padding: 10px 12px;
+  border: 1px solid #2f467c;
+  border-radius: 12px;
+  background: #0d1730;
+}
+.node-pill-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #e8ecf3;
+  word-break: break-word;
+}
+.node-pill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.node-pill-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid #395596;
+  background: #11204a;
+  color: #cfe0ff;
+}
+.node-pill-tag.is-source {
+  border-color: #2d7460;
+  background: #123328;
+  color: #c9f3e7;
+}
+.group-panel {
+  padding: 14px;
+}
+.group-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.group-panel-body {
+  margin-top: 12px;
+}
+.group-summary {
+  margin-top: 8px;
+}
+.group-toggle {
+  background: #2f467c;
+}
 
 @media (max-width: 900px) {
+  .form-grid-basic {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .field-with-action {
     grid-column: span 1;
   }
@@ -331,5 +416,17 @@ button:disabled {
 
   .kernel-pickers {
     flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .form-grid-basic {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row-2,
+  .form-row-3,
+  .form-row-custom {
+    grid-row: auto;
   }
 }

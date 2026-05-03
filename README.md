@@ -5,6 +5,10 @@
 ## 当前能力
 
 - 拉取并解析订阅节点
+- 支持多订阅地址
+  - 多个订阅 URL 顺序拉取
+  - 自动合并节点
+  - 自动去重
 - 支持 `vmess`、`vless`、`trojan`、`shadowsocks`、`hysteria2`、`tuic`
 - 支持 Base64、URL Safe Base64、多行订阅文本
 - 支持手动导入节点
@@ -31,7 +35,11 @@
   - 远端 DoH
   - Bootstrap DNS
   - 默认域名解析器单独配置
+  - 每个 `SOCKS5` 目标出口绑定各自的 DoH server
 - 支持运行状态与实时日志查看
+- 支持保存配置后自动生成 `sing-box` 配置
+- 支持运行中自动应用新配置
+  - 当前实现方式为自动重启 `sing-box`
 
 ## 项目结构
 
@@ -41,14 +49,17 @@
 - `D:\sub2socks5\src\lib\subscription.js`
   - 订阅拉取与节点解析
   - 手动节点原始输入解析
+  - 多订阅合并与去重
 - `D:\sub2socks5\src\lib\singbox-config.js`
   - 业务配置转换为 `sing-box` 配置
+  - 多出口 DNS server 生成
 - `D:\sub2socks5\src\lib\singbox-manager.js`
   - `sing-box` 进程控制
 - `D:\sub2socks5\src\lib\singbox-release.js`
   - release 获取、版本筛选、下载
 - `D:\sub2socks5\src\lib\storage.js`
   - 默认配置与持久化
+  - 旧配置兼容迁移
 - `D:\sub2socks5\src\public\index.html`
   - 主页
 - `D:\sub2socks5\src\public\app.js`
@@ -80,28 +91,41 @@
 2. 在主页保存基础配置
 3. 更新订阅，或在节点管理页导入手动节点
 4. 配置节点组与多个本地 `SOCKS5` 服务
-5. 生成 `sing-box` 运行配置
-6. 启动 `sing-box`
+5. 保存配置后自动生成 `sing-box` 配置
+6. 如果 `sing-box` 正在运行，则自动重启应用新配置
 7. 不同本地端口分别通过不同节点或节点组提供代理服务
 
 ## DNS 策略
 
-当前默认配置：
+当前支持：
 
-- 远端 DoH：`https://cloudflare-dns.com/dns-query`
-- Bootstrap DNS：`223.5.5.5:53`
+- DoH 服务器预设
+  - `https://dns.google/dns-query`
+  - `https://cloudflare-dns.com/dns-query`
+  - 自定义
+- DoH 引导解析 DNS 预设
+  - `1.1.1.1`
+  - `8.8.8.8`
+  - `223.5.5.5`
+  - 自定义
 
-设计目标：
+当前设计目标：
 
 - 尽量减少本机直连 DNS 泄漏
-- 由远端 DoH 完成主要解析
-- 用 Bootstrap DNS 解析 DoH 域名，保证首跳稳定
+- 主解析使用远端 DoH
+- 用 Bootstrap DNS 解析 DoH 域名
+- 每个本地 `SOCKS5` 服务的 DNS 请求跟随其目标出口，而不是统一走默认出口
 
 ## 节点组说明
 
 ### `urltest`
 
 - 使用 `sing-box` 原生 `urltest`
+- 支持测试地址预设
+  - `https://www.gstatic.com/generate_204`
+  - `https://www.google.com/generate_204`
+  - `https://cp.cloudflare.com/generate_204`
+  - 自定义
 - 定时对组内节点进行延迟测试
 - 自动选择更优节点转发流量
 
@@ -126,10 +150,22 @@
 - 拉取 `sing-box` 内核
 - 保存基础配置
 - 更新订阅
-- 生成配置
 - 启动 / 停止 `sing-box`
+- 配置多个订阅地址
 - 配置多个 `SOCKS5` 服务
+- 配置 DoH 服务器与 Bootstrap DNS 预设
 - 查看状态、生成结果和实时日志
+
+首页当前布局：
+
+- 第一行：`Web UI 监听地址`、`Web UI 端口`、`sing-box 二进制路径`、`日志级别`
+- 第二行：`DNS 策略`、`DOH 服务器`、`DoH 引导解析 DNS`
+- 第三行：`默认路由出口`、`自动启动`
+
+运行状态区域：
+
+- `状态`：显示运行摘要
+- `日志`：显示 `sing-box` 实时日志
 
 ### 节点管理页
 
@@ -141,6 +177,12 @@
 - 为节点组设置策略与测试参数
 - 按行添加节点组成员
 - 查看 `fallback` 当前活跃节点状态
+- 现有节点以卡片形式展示
+  - 第一行显示节点名称
+  - 第二行显示协议和来源标签
+- 节点组使用可展开卡片展示
+  - 折叠态显示组名、策略、成员数量
+  - 展开后显示组内节点与编辑项
 
 ## 手动导入节点格式
 
@@ -191,6 +233,9 @@ ss://...
 
 - `GET /api/config`
 - `POST /api/config`
+  - 保存业务配置
+  - 自动生成新的 `sing-box` 配置
+  - 如果运行中则自动重启应用新配置
 
 ### 订阅相关
 
@@ -272,14 +317,16 @@ Invoke-RestMethod `
   -Body "{}"
 ```
 
-### 6. 生成运行配置
+### 6. 保存配置并自动应用
 
 ```powershell
+$config = Invoke-RestMethod -Uri "http://127.0.0.1:18080/api/config"
+
 Invoke-RestMethod `
-  -Uri "http://127.0.0.1:18080/api/runtime/generate" `
+  -Uri "http://127.0.0.1:18080/api/config" `
   -Method Post `
   -ContentType "application/json" `
-  -Body "{}"
+  -Body ($config.config | ConvertTo-Json -Depth 20)
 ```
 
 ### 7. 启动 `sing-box`
@@ -338,11 +385,14 @@ curl.exe --socks5-hostname 127.0.0.1:53456 --max-time 25 https://www.gstatic.com
 - `POST /api/nodes/import` 已验证可成功导入 `vless://...`
 - `SOCKS5` 端口已验证可监听
 - 已验证可通过代理访问 Google / Gstatic 并返回 `204`
+- 已验证多出口 DNS server 生成逻辑正确
+- 已验证节点组排序在普通节点前面
 
 ## 注意事项
 
 - `fallback` 目前仍是第一版应用层实现
 - 某些机场私有字段仍可能需要继续兼容
+- 当前“运行中应用新配置”采用重启 `sing-box` 的方式，而不是热重载
 - 不建议把运行期文件和本地状态文件提交到 Git
 
 ## 后续建议

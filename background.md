@@ -21,6 +21,8 @@
 - `fetch`
 - 简单轮询刷新
 - 表单模式与 JSON 模式切换
+- 动态表单增删
+- 预设下拉与自定义输入显隐
 
 ### 代理内核
 
@@ -65,7 +67,7 @@
 ### 管理层职责
 
 - 读写业务配置
-- 拉取并解析订阅
+- 拉取并解析多订阅
 - 手动导入并解析节点
 - 维护节点组
 - 获取并缓存内核版本列表
@@ -86,6 +88,7 @@
 ### 展示层职责
 
 - 编辑基础配置
+- 编辑多个订阅地址
 - 编辑多个 `SOCKS5` 服务
 - 查看和管理节点
 - 管理节点组
@@ -96,12 +99,19 @@
 
 - `D:\sub2socks5\src\server.js`
   - HTTP 服务入口与 API 路由
+  - 保存配置后自动生成并应用运行配置
 - `D:\sub2socks5\src\lib\subscription.js`
-  - 订阅解析、原始节点导入解析、协议识别
+  - 多订阅拉取
+  - 订阅解析
+  - 原始节点导入解析
+  - 节点去重
 - `D:\sub2socks5\src\lib\singbox-config.js`
   - 业务配置转 `sing-box` 配置
+  - 多出口 DoH server 生成
 - `D:\sub2socks5\src\lib\storage.js`
-  - 默认配置、文件持久化、状态缓存
+  - 默认配置
+  - 文件持久化
+  - 旧配置迁移
 - `D:\sub2socks5\src\lib\singbox-manager.js`
   - `sing-box` 启停与日志收集
 - `D:\sub2socks5\src\lib\singbox-release.js`
@@ -120,6 +130,7 @@
 - 多行节点文本
 - Base64 订阅
 - URL Safe Base64 订阅
+- 多订阅 URL 汇总
 
 当前支持协议：
 
@@ -150,6 +161,7 @@
 
 - 已修复 Base64 订阅内容中 `raw` 字段导致的误判问题
 - 已兼容 `ss://base64-userinfo@host:port#tag` 这一类形式
+- 多订阅结果会按 `type + tag + server + port` 去重
 
 ## 6. 多 SOCKS5 服务模型
 
@@ -170,6 +182,7 @@
 
 - 每个 `ports[]` 条目生成一个 `socks` 入站
 - 每个入站按 tag 绑定到对应目标出站
+- 每个入站的 DNS `resolve` 规则绑定到对应出口的 DoH server
 
 用途说明：
 
@@ -178,21 +191,33 @@
 
 ## 7. DNS 方案与防泄漏思路
 
-当前默认配置：
+当前支持：
 
-- 远端 DoH：`https://cloudflare-dns.com/dns-query`
-- Bootstrap DNS：`223.5.5.5:53`
+- DoH 服务器预设
+  - `https://dns.google/dns-query`
+  - `https://cloudflare-dns.com/dns-query`
+  - 自定义
+- Bootstrap DNS 预设
+  - `1.1.1.1`
+  - `8.8.8.8`
+  - `223.5.5.5`
+  - 自定义
 
 设计目标：
 
 - 尽量避免本机直接 DNS 泄漏
 - 使用远端 DoH 完成主解析
 - 使用 Bootstrap DNS 解析 DoH 域名
+- 每个本地 `SOCKS5` 目标出口使用各自的 DoH detour
 
 当前实践结论：
 
-- 直接使用 `https://1.1.1.1/dns-query` 容易在部分环境出现证书、SNI 或超时问题
-- 采用 `cloudflare-dns.com` + Bootstrap DNS 的方案后，代理访问 Google / Gstatic 更稳定
+- 直接使用公共 DoH 时，DNS 检测网站可能显示 DoH 服务商的全球 POP，而不一定代表本地运营商 DNS 泄漏
+- 旧实现会让所有 DoH 请求统一走默认 `proxy`
+- 新实现已修正为：
+  - `dns-remote-proxy`
+  - `dns-remote-<group-or-node-tag>`
+  - 每个端口按目标出口使用对应 DoH
 
 ## 8. 节点组策略
 
@@ -203,10 +228,11 @@
   - 测试地址
   - 测试间隔
   - 超时毫秒
-
-当前默认测试地址：
-
-- `https://www.gstatic.com/generate_204`
+- 测试地址支持预设：
+  - `https://www.gstatic.com/generate_204`
+  - `https://www.google.com/generate_204`
+  - `https://cp.cloudflare.com/generate_204`
+  - 自定义
 
 ### `fallback`
 
@@ -251,11 +277,41 @@
 - 用户编辑中暂停表单回填
 - 避免在交互中重绘关键表单区域
 
-### 日志展示
+### 首页表单
 
-- 实时日志不再单独占主页窗口
-- 调整为主页选项卡
-- 日志与状态查看都保留在同一页面内
+当前首页支持：
+
+- 多订阅地址列表
+- 多 SOCKS5 服务列表
+- DoH 预设与自定义输入
+- Bootstrap DNS 预设与自定义输入
+- 保存后自动生成运行配置
+- 运行中自动重启应用新配置
+
+基础设置布局现状：
+
+- 第一行：Web UI 基础参数
+- 第二行：DNS 策略、DoH 服务器、DoH 引导解析 DNS
+- 第三行：默认路由出口、自动启动
+- 自定义 DoH / 自定义引导解析 DNS 在需要时单独显示
+
+### 运行状态展示
+
+- 运行状态区域改成：
+  - `状态`
+  - `日志`
+- `日志` 直接显示 `sing-box` 实时日志
+
+### 节点管理页
+
+当前节点管理页支持：
+
+- 现有节点使用圆角卡片展示
+- 卡片第一行显示节点名称
+- 第二行标签显示协议与来源
+- 节点组使用可展开面板
+- 折叠态显示概览，展开态显示成员与编辑区
+- 节点组在可选出口里排在普通节点前面
 
 ### 下载进度展示
 
@@ -268,6 +324,9 @@
 
 - `GET /api/config`
 - `POST /api/config`
+  - 保存业务配置
+  - 自动生成新配置
+  - 如果运行中，则自动重启 `sing-box`
 
 ### 订阅
 
@@ -325,14 +384,16 @@ Invoke-RestMethod `
   -Body $body
 ```
 
-### 生成运行配置
+### 保存配置并自动应用
 
 ```powershell
+$config = Invoke-RestMethod -Uri "http://127.0.0.1:18080/api/config"
+
 Invoke-RestMethod `
-  -Uri "http://127.0.0.1:18080/api/runtime/generate" `
+  -Uri "http://127.0.0.1:18080/api/config" `
   -Method Post `
   -ContentType "application/json" `
-  -Body "{}"
+  -Body ($config.config | ConvertTo-Json -Depth 20)
 ```
 
 ### 启动运行时
@@ -373,6 +434,8 @@ curl.exe --socks5-hostname 127.0.0.1:53456 --max-time 25 https://www.gstatic.com
 - `POST /api/nodes/import` 可成功导入 `vless://...`
 - `SOCKS5` 端口监听正常
 - 代理访问 Google / Gstatic 返回 `204`
+- 多出口 DoH server 生成符合预期
+- 节点组在出口列表中优先于普通节点显示
 
 环境说明：
 
@@ -386,6 +449,7 @@ curl.exe --socks5-hostname 127.0.0.1:53456 --max-time 25 https://www.gstatic.com
 - 某些机场私有字段仍可能需要继续兼容
 - 结构化 JSON 输入仍可继续补全协议默认字段
 - 内核下载速度仍受 GitHub 网络质量影响
+- 当前运行中配置应用方式为“自动重启”，不是 sing-box 原生热更新
 
 ## 14. 后续建议
 

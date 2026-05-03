@@ -6,10 +6,32 @@
   "dns": {
     "servers": [
       {
-        "tag": "dns-remote",
+        "tag": "dns-remote-proxy",
+        "type": "https",
+        "server": "dns.google",
+        "path": "/dns-query",
         "detour": "proxy",
-        "type": "tls",
-        "server": "1.1.1.1"
+        "domain_resolver": {
+          "server": "dns-bootstrap",
+          "strategy": "prefer_ipv4"
+        }
+      },
+      {
+        "tag": "dns-remote-sg",
+        "type": "https",
+        "server": "dns.google",
+        "path": "/dns-query",
+        "detour": "sg",
+        "domain_resolver": {
+          "server": "dns-bootstrap",
+          "strategy": "prefer_ipv4"
+        }
+      },
+      {
+        "tag": "dns-bootstrap",
+        "type": "udp",
+        "server": "1.1.1.1",
+        "server_port": 53
       },
       {
         "tag": "dns-direct",
@@ -20,9 +42,12 @@
       {
         "clash_mode": "Direct",
         "server": "dns-direct"
+      },
+      {
+        "server": "dns-remote-default"
       }
     ],
-    "final": "dns-remote",
+    "final": "dns-remote-proxy",
     "strategy": "prefer_ipv4",
     "independent_cache": true,
     "disable_cache": false,
@@ -149,7 +174,7 @@
       "type": "hysteria2",
       "tag": "HK2-HY2",
       "server": "hk2.dexlos.com",
-      "server_port": 20368,
+      "server_port": 20305,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -164,7 +189,7 @@
       "type": "hysteria2",
       "tag": "HK3-HY2",
       "server": "hk3.dexlos.com",
-      "server_port": 20413,
+      "server_port": 20538,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -179,7 +204,7 @@
       "type": "hysteria2",
       "tag": "HK4-HY2",
       "server": "hk4.dexlos.com",
-      "server_port": 20697,
+      "server_port": 20690,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -194,7 +219,7 @@
       "type": "hysteria2",
       "tag": "HK5-HY2",
       "server": "hk5.dexlos.com",
-      "server_port": 20818,
+      "server_port": 20966,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -309,7 +334,7 @@
       "type": "hysteria2",
       "tag": "JP6-HY2",
       "server": "jp6.dexlos.com",
-      "server_port": 21170,
+      "server_port": 21056,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -324,7 +349,7 @@
       "type": "hysteria2",
       "tag": "JP7-HY2",
       "server": "jp7.dexlos.com",
-      "server_port": 21310,
+      "server_port": 21298,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -339,7 +364,7 @@
       "type": "hysteria2",
       "tag": "JP8-HY2",
       "server": "jp8.dexlos.com",
-      "server_port": 21499,
+      "server_port": 21534,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -479,7 +504,7 @@
       "type": "hysteria2",
       "tag": "SG1-HY2",
       "server": "sg1.dexlos.com",
-      "server_port": 20189,
+      "server_port": 20076,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -494,7 +519,7 @@
       "type": "hysteria2",
       "tag": "SG2-HY2",
       "server": "sg2.dexlos.com",
-      "server_port": 20321,
+      "server_port": 20260,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -504,6 +529,14 @@
           "h3"
         ]
       }
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "ss-US-1",
+      "server": "155.117.87.123",
+      "server_port": 10378,
+      "method": "2022-blake3-aes-128-gcm",
+      "password": "MjAyNjJrNXN6WWtHQVZPeA==:M0E4QkE5MEMtOEY0RC00RA=="
     },
     {
       "type": "tuic",
@@ -754,7 +787,7 @@
       "type": "hysteria2",
       "tag": "US-gemini-1",
       "server": "us9.dexlos.com",
-      "server_port": 21704,
+      "server_port": 21775,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -769,7 +802,7 @@
       "type": "hysteria2",
       "tag": "US1-HY2",
       "server": "us1.dexlos.com",
-      "server_port": 20074,
+      "server_port": 20067,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -784,7 +817,7 @@
       "type": "hysteria2",
       "tag": "US2-HY2",
       "server": "us2.dexlos.com",
-      "server_port": 20294,
+      "server_port": 20336,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -799,7 +832,7 @@
       "type": "hysteria2",
       "tag": "US3-HY2",
       "server": "us3.dexlos.com",
-      "server_port": 20581,
+      "server_port": 20436,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -814,7 +847,7 @@
       "type": "hysteria2",
       "tag": "US4-HY2",
       "server": "us4.dexlos.com",
-      "server_port": 20657,
+      "server_port": 20726,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -829,7 +862,7 @@
       "type": "hysteria2",
       "tag": "US5-HY2",
       "server": "us5.dexlos.com",
-      "server_port": 20815,
+      "server_port": 20979,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -844,7 +877,7 @@
       "type": "hysteria2",
       "tag": "US6-HY2",
       "server": "us6.dexlos.com",
-      "server_port": 21178,
+      "server_port": 21010,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -859,7 +892,7 @@
       "type": "hysteria2",
       "tag": "US7-HY2",
       "server": "us7.dexlos.com",
-      "server_port": 21334,
+      "server_port": 21345,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -874,7 +907,7 @@
       "type": "hysteria2",
       "tag": "US8-HY2",
       "server": "us8.dexlos.com",
-      "server_port": 21584,
+      "server_port": 21470,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -884,6 +917,20 @@
           "h3"
         ]
       }
+    },
+    {
+      "type": "urltest",
+      "tag": "sg",
+      "outbounds": [
+        "SG-1",
+        "SG-2",
+        "SG-3",
+        "SG1-HY2",
+        "SG2-HY2"
+      ],
+      "url": "https://www.gstatic.com/generate_204",
+      "interval": "10m",
+      "tolerance": 50
     },
     {
       "type": "selector",
@@ -911,6 +958,7 @@
         "SG-3",
         "SG1-HY2",
         "SG2-HY2",
+        "ss-US-1",
         "TW-1",
         "TW-2",
         "TW-3",
@@ -932,7 +980,8 @@
         "US5-HY2",
         "US6-HY2",
         "US7-HY2",
-        "US8-HY2"
+        "US8-HY2",
+        "sg"
       ],
       "default": "HK-1"
     },
@@ -962,6 +1011,7 @@
         "SG-3",
         "SG1-HY2",
         "SG2-HY2",
+        "ss-US-1",
         "TW-1",
         "TW-2",
         "TW-3",
@@ -983,7 +1033,8 @@
         "US5-HY2",
         "US6-HY2",
         "US7-HY2",
-        "US8-HY2"
+        "US8-HY2",
+        "sg"
       ],
       "url": "https://www.gstatic.com/generate_204",
       "interval": "10m",
@@ -994,7 +1045,7 @@
     "auto_detect_interface": true,
     "final": "proxy",
     "default_domain_resolver": {
-      "server": "dns-remote",
+      "server": "dns-bootstrap",
       "strategy": "prefer_ipv4"
     },
     "rules": [
@@ -1008,11 +1059,12 @@
       {
         "inbound": "default-socks",
         "action": "resolve",
+        "server": "dns-remote-sg",
         "strategy": "prefer_ipv4"
       },
       {
         "inbound": "default-socks",
-        "outbound": "proxy"
+        "outbound": "sg"
       }
     ],
     "rule_set": []

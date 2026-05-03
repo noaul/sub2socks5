@@ -87,7 +87,6 @@
             <h2>基础配置</h2>
             <div class="section-heading-actions">
               <button id="save-config" type="button">保存配置</button>
-              <button id="generate" type="button">生成 sing-box 配置</button>
               <div id="editor-status" class="editor-status is-saved">配置已保存</div>
               <div class="view-switch">
                 <button id="switch-form" class="switch-button is-active" type="button">表单模式</button>
@@ -97,20 +96,7 @@
           </div>
 
           <div id="form-view" class="config-view">
-            <div class="form-grid">
-              <label class="field-with-action">
-                <span>订阅地址</span>
-                <div class="inline-field">
-                  <input id="field-subscription-url" type="text" />
-                  <button id="refresh-sub" type="button">更新订阅</button>
-                </div>
-              </label>
-              <label>
-                <span>订阅格式</span>
-                <select id="field-subscription-format">
-                  <option value="raw">raw</option>
-                </select>
-              </label>
+            <div class="form-grid form-grid-basic">
               <label>
                 <span>Web UI 监听地址</span>
                 <input id="field-app-host" type="text" />
@@ -135,11 +121,7 @@
                   <option value="panic">panic</option>
                 </select>
               </label>
-              <label>
-                <span>自动启动</span>
-                <input id="field-app-auto-start" type="checkbox" />
-              </label>
-              <label>
+              <label class="form-row-2">
                 <span>DNS 策略</span>
                 <select id="field-dns-strategy">
                   <option value="prefer_ipv4">prefer_ipv4</option>
@@ -148,19 +130,48 @@
                   <option value="ipv6_only">ipv6_only</option>
                 </select>
               </label>
-              <label>
-                <span>代理 DNS (DoH)</span>
+              <label class="form-row-2">
+                <span>DOH 服务器</span>
+                <select id="field-dns-remote-preset">
+                  <option value="google">https://dns.google/dns-query</option>
+                  <option value="cloudflare">https://cloudflare-dns.com/dns-query</option>
+                  <option value="custom">自定义</option>
+                </select>
+              </label>
+              <label id="field-dns-remote-url-wrap" class="form-row-custom">
+                <span>自定义 DOH 地址</span>
                 <input id="field-dns-remote-url" type="text" placeholder="https://1.1.1.1/dns-query" />
               </label>
-              <label>
+              <label class="form-row-2">
                 <span>DoH 引导解析 DNS</span>
+                <select id="field-dns-bootstrap-preset">
+                  <option value="1.1.1.1">1.1.1.1</option>
+                  <option value="8.8.8.8">8.8.8.8</option>
+                  <option value="223.5.5.5">223.5.5.5</option>
+                  <option value="custom">自定义</option>
+                </select>
+              </label>
+              <label id="field-dns-bootstrap-wrap" class="form-row-custom is-hidden">
+                <span>自定义引导解析 DNS</span>
                 <input id="field-dns-bootstrap" type="text" placeholder="223.5.5.5" />
               </label>
-              <label>
+              <label class="form-row-3">
                 <span>默认路由出口</span>
                 <select id="field-route-final"></select>
               </label>
+              <label class="form-row-3 checkbox-field">
+                <span>自动启动</span>
+                <input id="field-app-auto-start" type="checkbox" />
+              </label>
             </div>
+            <div class="section-heading socks-services-heading">
+              <h3>订阅地址</h3>
+              <div class="section-heading-actions">
+                <button id="refresh-sub" type="button">更新订阅</button>
+                <button id="add-subscription-url" type="button">+ 添加订阅地址</button>
+              </div>
+            </div>
+            <div id="subscription-urls" class="timeline"></div>
             <div class="section-heading socks-services-heading">
               <h3>SOCKS5 服务</h3>
               <button id="add-socks-service" type="button">+ 添加 SOCKS5 服务</button>
@@ -198,8 +209,8 @@
             <div class="section-heading">
               <h2>运行状态</h2>
               <div class="view-switch">
-                <button id="switch-runtime-form" class="switch-button is-active" type="button">表单模式</button>
-                <button id="switch-runtime-json" class="switch-button" type="button">JSON 模式</button>
+                <button id="switch-runtime-form" class="switch-button is-active" type="button">状态</button>
+                <button id="switch-runtime-json" class="switch-button" type="button">日志</button>
               </div>
             </div>
             <div id="runtime-form-view" class="info-view">

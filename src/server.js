@@ -75,8 +75,14 @@ const server = http.createServer(async (req, res) => {
         const body = await readJson(req);
         appConfig = body;
         await saveConfig(appConfig);
+        const generated = buildSingBoxConfig(appConfig, subscriptionState);
+        await writeGeneratedConfig(generated);
+        if (manager.getStatus().running) {
+          await manager.start(appConfig.app.singBoxBinary, generatedConfigPath);
+          restartFallbackLoop();
+        }
         restartFallbackLoop();
-        return ok(res, { ok: true });
+        return ok(res, { ok: true, generated, runtime: manager.getStatus() });
       }
       return methodNotAllowed(res, ['GET', 'POST']);
     }
@@ -327,7 +333,11 @@ server.listen(appConfig.app.port, appConfig.app.host, async () => {
 
 async function refreshSubscription() {
   const result = await fetchSubscription(appConfig.subscription);
-  const nextState = { ...result, updatedAt: new Date().toISOString() };
+  const nextState = {
+    ...result,
+    sources: Array.isArray(appConfig.subscription?.urls) ? appConfig.subscription.urls : (appConfig.subscription?.url ? [appConfig.subscription.url] : []),
+    updatedAt: new Date().toISOString()
+  };
   await saveSubscriptionState(nextState);
   return nextState;
 }
@@ -394,7 +404,7 @@ function collectAvailableOutbounds(config, subscription) {
   const manualNodes = config?.nodeRegistry?.manualNodes || [];
   const groups = config?.nodeRegistry?.groups || [];
   const builtins = [
-    { tag: 'proxy', type: 'selector', source: 'builtin', label: 'proxy（自动选择器）' },
+    { tag: 'proxy', type: 'selector', source: 'builtin', label: 'proxy（自动选择）' },
     { tag: 'auto', type: 'urltest', source: 'builtin', label: 'auto（延迟测试）' },
     { tag: 'direct', type: 'direct', source: 'builtin', label: 'direct' },
     { tag: 'block', type: 'block', source: 'builtin', label: 'block' }
@@ -402,6 +412,12 @@ function collectAvailableOutbounds(config, subscription) {
 
   return [
     ...builtins,
+    ...groups.map((group) => ({
+      tag: group.tag,
+      type: group.strategy,
+      source: 'group',
+      label: `${group.tag}（${group.strategy} / 节点组）`
+    })),
     ...subscriptionNodes.map((node) => ({
       tag: node.tag,
       type: node.type,
@@ -413,12 +429,6 @@ function collectAvailableOutbounds(config, subscription) {
       type: node.type,
       source: 'manual',
       label: `${node.tag}（${node.type} / 手动）`
-    })),
-    ...groups.map((group) => ({
-      tag: group.tag,
-      type: group.strategy,
-      source: 'group',
-      label: `${group.tag}（${group.strategy} / 节点组）`
     }))
   ];
 }

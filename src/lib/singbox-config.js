@@ -1,7 +1,8 @@
 import { Buffer } from 'node:buffer';
 
 export function buildSingBoxConfig(appConfig, subscriptionState) {
-  const dnsServers = buildDnsServers(appConfig.dns || {});
+  const dnsContext = buildDnsContext(appConfig);
+  const dnsServers = dnsContext.servers;
   const dnsRules = buildDnsRules(appConfig.dns || {});
   const mergedNodes = [
     ...(subscriptionState.nodes || []),
@@ -63,6 +64,7 @@ export function buildSingBoxConfig(appConfig, subscriptionState) {
         rules.push({
           inbound: item.tag,
           action: 'resolve',
+          server: dnsContext.serverByOutbound[item.target] || dnsContext.defaultServerTag,
           strategy: appConfig.dns.strategy
         });
       }
@@ -82,7 +84,7 @@ export function buildSingBoxConfig(appConfig, subscriptionState) {
     dns: {
       servers: dnsServers,
       rules: dnsRules,
-      final: appConfig.dns.final || 'dns-remote',
+      final: dnsContext.defaultServerTag,
       strategy: appConfig.dns.strategy,
       independent_cache: appConfig.dns.independentCache,
       disable_cache: appConfig.dns.disableCache,
@@ -94,7 +96,7 @@ export function buildSingBoxConfig(appConfig, subscriptionState) {
       auto_detect_interface: appConfig.routing.autoDetectInterface,
       final: appConfig.routing.routeFinal,
       default_domain_resolver: {
-        server: appConfig.dns.defaultDomainResolver || 'dns-bootstrap',
+        server: appConfig.dns.defaultDomainResolver || dnsContext.bootstrapTag || dnsContext.defaultServerTag,
         strategy: appConfig.dns.strategy
       },
       rules: routeRules,
@@ -245,12 +247,7 @@ function normalizeGroups(groups, nodes, fallbackStates) {
 }
 
 function buildDnsServers(dnsConfig) {
-  const remoteUrl = dnsConfig.remoteUrl || 'https://cloudflare-dns.com/dns-query';
-  const bootstrapServer = dnsConfig.bootstrapServer || '223.5.5.5';
-  const remote = buildHttpsDnsServer(remoteUrl, bootstrapServer);
-  const bootstrap = buildBootstrapDnsServer(bootstrapServer);
-  const direct = { tag: 'dns-direct', type: 'local' };
-  return [remote, bootstrap, direct].filter(Boolean);
+  return buildDnsContext({ dns: dnsConfig, routing: { routeFinal: 'proxy' }, ports: [] }).servers;
 }
 
 function buildDnsRules(dnsConfig) {
@@ -260,18 +257,50 @@ function buildDnsRules(dnsConfig) {
       rules.push({ clash_mode: 'Direct', server: 'dns-direct' });
     }
   }
-  rules.push({ server: dnsConfig.final || 'dns-remote' });
+  rules.push({ server: dnsConfig.final || 'dns-remote-default' });
   return rules;
 }
 
-function buildHttpsDnsServer(remoteUrl, bootstrapServer) {
+function buildDnsContext(appConfig) {
+  const dnsConfig = appConfig.dns || {};
+  const remoteUrl = dnsConfig.remoteUrl || 'https://cloudflare-dns.com/dns-query';
+  const bootstrapServer = dnsConfig.bootstrapServer || '223.5.5.5';
+  const defaultOutbound = appConfig.routing?.routeFinal || 'proxy';
+  const targets = new Set([defaultOutbound, ...(appConfig.ports || []).map((item) => item.target).filter(Boolean)]);
+  const bootstrap = buildBootstrapDnsServer(bootstrapServer);
+  const direct = { tag: 'dns-direct', type: 'local' };
+  const serverByOutbound = {};
+  const servers = [];
+
+  for (const outboundTag of targets) {
+    if (!outboundTag) continue;
+    const serverTag = `dns-remote-${sanitizeTag(outboundTag)}`;
+    serverByOutbound[outboundTag] = serverTag;
+    servers.push(buildHttpsDnsServer(remoteUrl, bootstrapServer, serverTag, outboundTag));
+  }
+
+  if (!servers.length) {
+    const fallbackTag = 'dns-remote-default';
+    serverByOutbound[defaultOutbound] = fallbackTag;
+    servers.push(buildHttpsDnsServer(remoteUrl, bootstrapServer, fallbackTag, defaultOutbound));
+  }
+
+  return {
+    servers: [...servers, bootstrap, direct].filter(Boolean),
+    serverByOutbound,
+    defaultServerTag: serverByOutbound[defaultOutbound] || servers[0]?.tag || 'dns-remote-default',
+    bootstrapTag: bootstrap?.tag || null
+  };
+}
+
+function buildHttpsDnsServer(remoteUrl, bootstrapServer, tag = 'dns-remote', detour = 'proxy') {
   const url = new URL(remoteUrl);
   return stripUndefined({
-    tag: 'dns-remote',
+    tag,
     type: 'https',
     server: url.host,
     path: url.pathname || '/dns-query',
-    detour: 'proxy',
+    detour,
     domain_resolver: bootstrapServer ? {
       server: 'dns-bootstrap',
       strategy: 'prefer_ipv4'
@@ -289,6 +318,10 @@ function buildBootstrapDnsServer(bootstrapServer) {
     server: bootstrapServer,
     server_port: 53
   };
+}
+
+function sanitizeTag(value) {
+  return String(value).replace(/[^a-zA-Z0-9_-]/g, '_');
 }
 
 function decodeShadowsocksCredentials(value) {
