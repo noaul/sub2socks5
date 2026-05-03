@@ -14,8 +14,11 @@ import {
   saveSubscriptionState,
   saveConfig,
   writeGeneratedConfig,
+  pathExists,
+  resolveManagedPath,
   publicDir,
-  generatedConfigPath
+  generatedConfigPath,
+  subscriptionStatePath
 } from './lib/storage.js';
 import { fetchSubscription } from './lib/subscription.js';
 import { parseManualNodeInput } from './lib/subscription.js';
@@ -49,6 +52,8 @@ let downloadState = {
 };
 let fallbackTimer = null;
 
+await initializePresetState();
+
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
@@ -78,7 +83,7 @@ const server = http.createServer(async (req, res) => {
         const generated = buildSingBoxConfig(appConfig, subscriptionState);
         await writeGeneratedConfig(generated);
         if (manager.getStatus().running) {
-          await manager.start(appConfig.app.singBoxBinary, generatedConfigPath);
+          await manager.start(resolveManagedPath(appConfig.app.singBoxBinary), generatedConfigPath);
           restartFallbackLoop();
         }
         restartFallbackLoop();
@@ -278,7 +283,7 @@ const server = http.createServer(async (req, res) => {
         ensureNodesLoaded();
         const generated = buildSingBoxConfig(appConfig, subscriptionState);
         await writeGeneratedConfig(generated);
-        await manager.start(appConfig.app.singBoxBinary, generatedConfigPath);
+        await manager.start(resolveManagedPath(appConfig.app.singBoxBinary), generatedConfigPath);
         restartFallbackLoop();
         return ok(res, manager.getStatus());
       }
@@ -323,13 +328,27 @@ server.listen(appConfig.app.port, appConfig.app.host, async () => {
       subscriptionState = await refreshSubscription();
       const generated = buildSingBoxConfig(appConfig, subscriptionState);
       await writeGeneratedConfig(generated);
-      await manager.start(appConfig.app.singBoxBinary, generatedConfigPath);
+      await manager.start(resolveManagedPath(appConfig.app.singBoxBinary), generatedConfigPath);
       restartFallbackLoop();
     } catch (error) {
       manager.pushLog(`Auto start failed: ${error.message}`);
     }
   }
 });
+
+async function initializePresetState() {
+  const runtimeExists = await pathExists(generatedConfigPath);
+  const subscriptionExists = await pathExists(subscriptionStatePath);
+
+  if (!subscriptionExists) {
+    await saveSubscriptionState(subscriptionState);
+  }
+
+  if (!runtimeExists) {
+    const generated = buildSingBoxConfig(appConfig, subscriptionState);
+    await writeGeneratedConfig(generated);
+  }
+}
 
 async function refreshSubscription() {
   const result = await fetchSubscription(appConfig.subscription);

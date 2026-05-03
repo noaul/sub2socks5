@@ -4,12 +4,12 @@ import { fileURLToPath } from 'node:url';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const srcDir = path.dirname(moduleDir);
-const baseDir = path.dirname(srcDir);
 
-export const dataDir = path.join(baseDir, 'data');
-export const runtimeDir = path.join(baseDir, 'runtime');
+export const dataDir = path.join(srcDir, 'data');
+export const runtimeDir = path.join(srcDir, 'runtime');
 export const publicDir = path.join(srcDir, 'public');
-export const binDir = path.join(baseDir, 'bin');
+export const binDir = path.join(srcDir, 'bin');
+export const projectDir = path.dirname(srcDir);
 export const appConfigPath = path.join(dataDir, 'app-config.json');
 export const generatedConfigPath = path.join(runtimeDir, 'sing-box.json');
 export const architectureInfoPath = path.join(dataDir, 'architecture-info.json');
@@ -17,15 +17,16 @@ export const plannedKernelInfoPath = path.join(dataDir, 'planned-kernel-info.jso
 export const releaseListInfoPath = path.join(dataDir, 'release-list.json');
 export const subscriptionStatePath = path.join(dataDir, 'subscription-state.json');
 
-const legacyDataDir = path.join(srcDir, 'data');
-const legacyRuntimeDir = path.join(srcDir, 'runtime');
-const legacyBinDir = path.join(srcDir, 'bin');
+const legacyDataDir = path.join(projectDir, 'data');
+const legacyRuntimeDir = path.join(projectDir, 'runtime');
+const legacyBinDir = path.join(projectDir, 'bin');
+const defaultBinaryRelativePath = path.join('src', 'bin', process.platform === 'win32' ? 'sing-box.exe' : 'sing-box');
 
 export const defaultConfig = {
   app: {
     host: '127.0.0.1',
     port: 18080,
-    singBoxBinary: path.join(binDir, process.platform === 'win32' ? 'sing-box.exe' : 'sing-box'),
+    singBoxBinary: defaultBinaryRelativePath,
     autoStart: false,
     logLevel: 'info'
   },
@@ -131,6 +132,24 @@ export async function saveConfig(config) {
 export async function writeGeneratedConfig(config) {
   await ensureDirs();
   await writeFile(generatedConfigPath, JSON.stringify(config, null, 2), 'utf8');
+}
+
+export async function pathExists(targetPath) {
+  try {
+    await access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function resolveManagedPath(targetPath) {
+  if (!targetPath) {
+    return '';
+  }
+  return path.isAbsolute(targetPath)
+    ? targetPath
+    : path.resolve(projectDir, targetPath);
 }
 
 export async function saveArchitectureInfo(info) {
@@ -245,8 +264,14 @@ function mergeDefaults(base, value) {
 }
 
 function migrateConfig(config) {
+  config.app ||= {};
   config.dns ||= {};
   config.subscription ||= {};
+  if (!config.app.singBoxBinary) {
+    config.app.singBoxBinary = defaultBinaryRelativePath;
+  } else {
+    config.app.singBoxBinary = migrateManagedPath(config.app.singBoxBinary);
+  }
   if (!Array.isArray(config.subscription.urls)) {
     config.subscription.urls = [];
   }
@@ -281,6 +306,32 @@ function migrateConfig(config) {
     config.dns.defaultDomainResolver = 'dns-bootstrap';
   }
   return config;
+}
+
+function migrateManagedPath(inputPath) {
+  const normalized = String(inputPath || '').trim();
+  if (!normalized) {
+    return defaultBinaryRelativePath;
+  }
+
+  const candidates = [
+    path.join(projectDir, 'bin'),
+    path.join(projectDir, 'runtime'),
+    path.join(projectDir, 'data'),
+    binDir,
+    runtimeDir,
+    dataDir
+  ].map((item) => path.resolve(item));
+
+  const resolved = path.resolve(normalized);
+  for (const basePath of candidates) {
+    const relative = path.relative(basePath, resolved);
+    if (!relative.startsWith('..') && !path.isAbsolute(relative)) {
+      return path.join('src', path.basename(basePath), relative);
+    }
+  }
+
+  return normalized;
 }
 
 function inferDnsPreset(remoteUrl = '') {

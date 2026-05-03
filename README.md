@@ -73,15 +73,15 @@
 
 ### 持久化目录
 
-- `D:\sub2socks5\data`
+- `D:\sub2socks5\src\data`
   - 业务配置
   - 订阅状态
   - 架构信息
   - 版本列表缓存
   - 计划下载版本
-- `D:\sub2socks5\runtime`
+- `D:\sub2socks5\src\runtime`
   - 生成后的 `sing-box.json`
-- `D:\sub2socks5\bin`
+- `D:\sub2socks5\src\bin`
   - 已安装的 `sing-box` 内核
 
 ## 工作流程
@@ -394,10 +394,3 @@ curl.exe --socks5-hostname 127.0.0.1:53456 --max-time 25 https://www.gstatic.com
 - 某些机场私有字段仍可能需要继续兼容
 - 当前“运行中应用新配置”采用重启 `sing-box` 的方式，而不是热重载
 - 不建议把运行期文件和本地状态文件提交到 Git
-
-## 后续建议
-
-- 给手动导入增加导入预览
-- 给结构化 JSON 输入补全更多协议默认字段
-- 继续增强 Mihomo 风格 `fallback`
-- 为节点健康检查增加更直观的 UI 展示

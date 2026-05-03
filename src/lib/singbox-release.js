@@ -4,7 +4,7 @@ import { chmod, mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile }
 import { tmpdir } from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { binDir } from './storage.js';
+import { binDir, projectDir } from './storage.js';
 
 const execFileAsync = promisify(execFile);
 const repoApi = 'https://api.github.com/repos/SagerNet/sing-box/releases';
@@ -118,7 +118,7 @@ export async function downloadSingBoxRelease(options = {}) {
     onProgress(step('done', 'Kernel installation completed', { binaryPath: binaryTarget }));
     return {
       ok: true,
-      binaryPath: binaryTarget,
+      binaryPath: path.relative(projectDir, binaryTarget),
       ...release
     };
   } finally {

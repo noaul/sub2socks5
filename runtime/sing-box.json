@@ -174,7 +174,7 @@
       "type": "hysteria2",
       "tag": "HK2-HY2",
       "server": "hk2.dexlos.com",
-      "server_port": 20305,
+      "server_port": 20397,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -189,7 +189,7 @@
       "type": "hysteria2",
       "tag": "HK3-HY2",
       "server": "hk3.dexlos.com",
-      "server_port": 20538,
+      "server_port": 20536,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -204,7 +204,7 @@
       "type": "hysteria2",
       "tag": "HK4-HY2",
       "server": "hk4.dexlos.com",
-      "server_port": 20690,
+      "server_port": 20721,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -219,7 +219,7 @@
       "type": "hysteria2",
       "tag": "HK5-HY2",
       "server": "hk5.dexlos.com",
-      "server_port": 20966,
+      "server_port": 20901,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -334,7 +334,7 @@
       "type": "hysteria2",
       "tag": "JP6-HY2",
       "server": "jp6.dexlos.com",
-      "server_port": 21056,
+      "server_port": 21197,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -349,7 +349,7 @@
       "type": "hysteria2",
       "tag": "JP7-HY2",
       "server": "jp7.dexlos.com",
-      "server_port": 21298,
+      "server_port": 21293,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -364,7 +364,7 @@
       "type": "hysteria2",
       "tag": "JP8-HY2",
       "server": "jp8.dexlos.com",
-      "server_port": 21534,
+      "server_port": 21411,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -504,7 +504,7 @@
       "type": "hysteria2",
       "tag": "SG1-HY2",
       "server": "sg1.dexlos.com",
-      "server_port": 20076,
+      "server_port": 20182,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -519,7 +519,7 @@
       "type": "hysteria2",
       "tag": "SG2-HY2",
       "server": "sg2.dexlos.com",
-      "server_port": 20260,
+      "server_port": 20388,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -787,7 +787,7 @@
       "type": "hysteria2",
       "tag": "US-gemini-1",
       "server": "us9.dexlos.com",
-      "server_port": 21775,
+      "server_port": 21729,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -802,7 +802,7 @@
       "type": "hysteria2",
       "tag": "US1-HY2",
       "server": "us1.dexlos.com",
-      "server_port": 20067,
+      "server_port": 20103,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -817,7 +817,7 @@
       "type": "hysteria2",
       "tag": "US2-HY2",
       "server": "us2.dexlos.com",
-      "server_port": 20336,
+      "server_port": 20275,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -832,7 +832,7 @@
       "type": "hysteria2",
       "tag": "US3-HY2",
       "server": "us3.dexlos.com",
-      "server_port": 20436,
+      "server_port": 20533,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -847,7 +847,7 @@
       "type": "hysteria2",
       "tag": "US4-HY2",
       "server": "us4.dexlos.com",
-      "server_port": 20726,
+      "server_port": 20663,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -862,7 +862,7 @@
       "type": "hysteria2",
       "tag": "US5-HY2",
       "server": "us5.dexlos.com",
-      "server_port": 20979,
+      "server_port": 20816,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -877,7 +877,7 @@
       "type": "hysteria2",
       "tag": "US6-HY2",
       "server": "us6.dexlos.com",
-      "server_port": 21010,
+      "server_port": 21122,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -892,7 +892,7 @@
       "type": "hysteria2",
       "tag": "US7-HY2",
       "server": "us7.dexlos.com",
-      "server_port": 21345,
+      "server_port": 21328,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
@@ -907,7 +907,7 @@
       "type": "hysteria2",
       "tag": "US8-HY2",
       "server": "us8.dexlos.com",
-      "server_port": 21470,
+      "server_port": 21435,
       "password": "3A8BA90C-8F4D-4DC7-877E-56F4F96F448A",
       "tls": {
         "enabled": true,
