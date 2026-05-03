@@ -1,17 +1,19 @@
 import { Buffer } from 'node:buffer';
 
 export function buildSingBoxConfig(appConfig, subscriptionState) {
+  const disabledSubscriptionTags = new Set(appConfig.nodeRegistry?.disabledSubscriptionTags || []);
   const dnsContext = buildDnsContext(appConfig);
   const dnsServers = dnsContext.servers;
   const dnsRules = buildDnsRules(appConfig.dns || {});
   const mergedNodes = [
-    ...(subscriptionState.nodes || []),
+    ...(subscriptionState.nodes || []).filter((node) => !disabledSubscriptionTags.has(node?.tag)),
     ...((appConfig.nodeRegistry?.manualNodes) || [])
   ];
   const normalizedNodes = mergedNodes
     .map(normalizeOutbound)
     .filter(isUsableOutbound);
   const groups = normalizeGroups(appConfig.nodeRegistry?.groups || [], normalizedNodes, appConfig.runtimeState?.fallbackGroups || {});
+  const chains = normalizeChains(appConfig.nodeRegistry?.chains || [], normalizedNodes);
 
   const outbounds = [
     {
@@ -23,10 +25,14 @@ export function buildSingBoxConfig(appConfig, subscriptionState) {
       tag: 'block'
     },
     ...normalizedNodes,
-    ...groups
+    ...groups,
+    ...chains.outbounds
   ];
 
-  const nodeTags = normalizedNodes.map((node) => node.tag).concat(groups.map((group) => group.tag));
+  const nodeTags = normalizedNodes
+    .map((node) => node.tag)
+    .concat(groups.map((group) => group.tag))
+    .concat(chains.tags);
 
   if (nodeTags.length) {
     outbounds.push({
@@ -248,6 +254,49 @@ function normalizeGroups(groups, nodes, fallbackStates) {
 
 function buildDnsServers(dnsConfig) {
   return buildDnsContext({ dns: dnsConfig, routing: { routeFinal: 'proxy' }, ports: [] }).servers;
+}
+
+function normalizeChains(chains, nodes) {
+  const nodeMap = new Map(nodes.map((node) => [node.tag, node]));
+  const chainOutbounds = [];
+  const tags = [];
+
+  for (const chain of chains
+    .filter((chain) => chain?.tag && Array.isArray(chain.members) && chain.members.length)
+  ) {
+    const members = chain.members.filter((tag) => nodeMap.has(tag));
+    if (!members.length) {
+      continue;
+    }
+
+    let previousHopTag = '';
+    members.forEach((memberTag, memberIndex) => {
+      const original = nodeMap.get(memberTag);
+      const cloned = structuredClone(original);
+      cloned.tag = `${chain.tag}__hop_${memberIndex + 1}`;
+      if (previousHopTag) {
+        cloned.detour = previousHopTag;
+      } else {
+        delete cloned.detour;
+      }
+      chainOutbounds.push(stripUndefined(cloned));
+      previousHopTag = cloned.tag;
+    });
+
+    chainOutbounds.push({
+      type: 'selector',
+      tag: chain.tag,
+      outbounds: [previousHopTag],
+      default: previousHopTag,
+      interrupt_exist_connections: false
+    });
+    tags.push(chain.tag);
+  }
+
+  return {
+    outbounds: chainOutbounds,
+    tags
+  };
 }
 
 function buildDnsRules(dnsConfig) {

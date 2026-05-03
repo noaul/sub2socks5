@@ -5,6 +5,8 @@ const supportedSchemes = new Set([
   'vless:',
   'trojan:',
   'ss:',
+  'socks5:',
+  'socks:',
   'hysteria2:',
   'tuic:'
 ]);
@@ -158,6 +160,16 @@ function parseLine(line) {
       tls: buildTls(url),
       up_mbps: numberOrUndefined(url.searchParams.get('upmbps')),
       down_mbps: numberOrUndefined(url.searchParams.get('downmbps'))
+    };
+  }
+  if (url.protocol === 'socks5:' || url.protocol === 'socks:') {
+    return {
+      type: 'socks',
+      tag,
+      server: url.hostname,
+      server_port: Number(url.port || 1080),
+      username: decodeURIComponent(url.username || ''),
+      password: decodeURIComponent(url.password || '')
     };
   }
   if (url.protocol === 'tuic:') {
@@ -506,6 +518,10 @@ function validateNode(node) {
 
   if (node.type === 'shadowsocks' && (!node.method || !node.password)) {
     return `${node.tag} 缺少 shadowsocks 凭据`;
+  }
+
+  if (node.type === 'socks' && !node.server) {
+    return `${node.tag} 缺少 socks 服务器地址`;
   }
 
   return '';

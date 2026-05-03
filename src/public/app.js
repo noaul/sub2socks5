@@ -681,7 +681,8 @@ function buildSubscriptionSummary(subscription) {
     nodeCount: nodes.length + 1,
     warningCount: (subscription?.warnings || []).length,
     firstNode: 'direct',
-    warnings: (subscription?.warnings || []).join(' | ')
+    warnings: (subscription?.warnings || []).join(' | '),
+    rawLength: subscription?.rawLength || 0
   };
 }
 

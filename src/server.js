@@ -66,7 +66,7 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'GET') {
         return ok(res, {
           config: appConfig,
-          subscription: subscriptionState,
+          subscription: buildSubscriptionSummaryPayload(subscriptionState),
           availableOutbounds: collectAvailableOutbounds(appConfig, subscriptionState),
           runtime: manager.getStatus(),
           kernel: kernelState,
@@ -102,10 +102,16 @@ const server = http.createServer(async (req, res) => {
 
     if (url.pathname === '/api/nodes') {
       if (req.method === 'GET') {
+        const disabledSubscriptionTags = new Set(appConfig.nodeRegistry?.disabledSubscriptionTags || []);
         return ok(res, {
-          subscriptionNodes: [{ tag: 'direct', type: 'direct', source: 'builtin' }, ...(subscriptionState.nodes || [])],
+          subscriptionNodes: [
+            { tag: 'direct', type: 'direct', source: 'builtin' },
+            ...((subscriptionState.nodes || []).filter((node) => !disabledSubscriptionTags.has(node?.tag)))
+          ],
+          disabledSubscriptionTags: appConfig.nodeRegistry?.disabledSubscriptionTags || [],
           manualNodes: appConfig.nodeRegistry?.manualNodes || [],
           groups: appConfig.nodeRegistry?.groups || [],
+          chains: appConfig.nodeRegistry?.chains || [],
           availableOutbounds: collectAvailableOutbounds(appConfig, subscriptionState),
           fallbackStates: appConfig.runtimeState?.fallbackGroups || {}
         });
@@ -117,12 +123,19 @@ const server = http.createServer(async (req, res) => {
         appConfig.nodeRegistry.groups = Array.isArray(body.groups)
           ? body.groups.map(normalizeGroupConfig)
           : [];
+        appConfig.nodeRegistry.chains = Array.isArray(body.chains)
+          ? body.chains.map(normalizeChainConfig)
+          : [];
+        appConfig.nodeRegistry.disabledSubscriptionTags = Array.isArray(body.disabledSubscriptionTags)
+          ? body.disabledSubscriptionTags.map((item) => String(item || '').trim()).filter(Boolean)
+          : (appConfig.nodeRegistry.disabledSubscriptionTags || []);
         await saveConfig(appConfig);
         restartFallbackLoop();
         return ok(res, {
           ok: true,
           manualNodes: appConfig.nodeRegistry.manualNodes,
           groups: appConfig.nodeRegistry.groups,
+          chains: appConfig.nodeRegistry.chains,
           availableOutbounds: collectAvailableOutbounds(appConfig, subscriptionState)
         });
       }
@@ -134,6 +147,39 @@ const server = http.createServer(async (req, res) => {
         const body = await readJson(req);
         const result = parseManualNodeInput(body.raw || '');
         return ok(res, result);
+      }
+      return methodNotAllowed(res, ['POST']);
+    }
+
+    if (url.pathname === '/api/nodes/check') {
+      if (req.method === 'POST') {
+        const body = await readJson(req);
+        const tags = Array.isArray(body?.tags)
+          ? body.tags.map((item) => String(item || '').trim()).filter(Boolean)
+          : [];
+        if (!tags.length) {
+          return fail(res, 400, 'Missing node tags for check');
+        }
+        const urlToTest = String(body?.url || 'https://www.gstatic.com/generate_204');
+        const timeout = Number(body?.timeoutMs || 5000);
+        const results = {};
+        for (const tag of tags) {
+          const chainTag = isChainTag(tag) ? tag : null;
+          const resolvedTag = chainTag ? tag : resolveCheckTargetTag(tag);
+          const result = chainTag
+            ? await checkChainConnectivity(chainTag, urlToTest, timeout)
+            : await measureOutboundDelay(resolvedTag, urlToTest, timeout);
+          results[tag] = {
+            ...result,
+            checkedTag: resolvedTag
+          };
+        }
+        return ok(res, {
+          ok: true,
+          url: urlToTest,
+          timeoutMs: timeout,
+          results
+        });
       }
       return methodNotAllowed(res, ['POST']);
     }
@@ -419,9 +465,11 @@ function ensureNodesLoaded() {
 }
 
 function collectAvailableOutbounds(config, subscription) {
-  const subscriptionNodes = subscription?.nodes || [];
+  const disabledSubscriptionTags = new Set(config?.nodeRegistry?.disabledSubscriptionTags || []);
+  const subscriptionNodes = (subscription?.nodes || []).filter((node) => !disabledSubscriptionTags.has(node?.tag));
   const manualNodes = config?.nodeRegistry?.manualNodes || [];
   const groups = config?.nodeRegistry?.groups || [];
+  const chains = config?.nodeRegistry?.chains || [];
   const builtins = [
     { tag: 'proxy', type: 'selector', source: 'builtin', label: 'proxy（自动选择）' },
     { tag: 'auto', type: 'urltest', source: 'builtin', label: 'auto（延迟测试）' },
@@ -436,6 +484,12 @@ function collectAvailableOutbounds(config, subscription) {
       type: group.strategy,
       source: 'group',
       label: `${group.tag}（${group.strategy} / 节点组）`
+    })),
+    ...chains.map((chain) => ({
+      tag: chain.tag,
+      type: 'chain',
+      source: 'chain',
+      label: `${chain.tag}（chain / 链式代理）`
     })),
     ...subscriptionNodes.map((node) => ({
       tag: node.tag,
@@ -453,6 +507,7 @@ function collectAvailableOutbounds(config, subscription) {
 }
 
 function normalizeGroupConfig(group) {
+
   return {
     tag: group?.tag || '',
     strategy: group?.strategy || 'urltest',
@@ -460,6 +515,55 @@ function normalizeGroupConfig(group) {
     interval: group?.interval || '10m',
     timeoutMs: Number(group?.timeoutMs || 5000),
     members: Array.isArray(group?.members) ? group.members : []
+  };
+}
+
+function normalizeChainConfig(chain) {
+  return {
+    tag: chain?.tag || '',
+    members: Array.isArray(chain?.members) ? chain.members : []
+  };
+}
+
+function resolveCheckTargetTag(tag) {
+  const chains = appConfig.nodeRegistry?.chains || [];
+  const matchedChain = chains.find((chain) => chain?.tag === tag);
+  if (matchedChain && Array.isArray(matchedChain.members) && matchedChain.members.length) {
+    return matchedChain.members[matchedChain.members.length - 1];
+  }
+  return tag;
+}
+
+function isChainTag(tag) {
+  return (appConfig.nodeRegistry?.chains || []).some((chain) => chain?.tag === tag);
+}
+
+async function checkChainConnectivity(chainTag, url, timeout) {
+  const result = await measureOutboundDelay(chainTag, url, timeout);
+  if (result.ok) {
+    return {
+      ok: true,
+      text: '通过',
+      checkedAt: new Date().toISOString(),
+      chainTag
+    };
+  }
+  return {
+    ok: false,
+    text: '失败',
+    error: result.error,
+    checkedAt: new Date().toISOString(),
+    chainTag
+  };
+}
+
+function buildSubscriptionSummaryPayload(subscription) {
+  return {
+    nodes: subscription?.nodes || [],
+    warnings: subscription?.warnings || [],
+    updatedAt: subscription?.updatedAt || null,
+    sources: subscription?.sources || [],
+    rawLength: typeof subscription?.raw === 'string' ? subscription.raw.length : 0
   };
 }
 
@@ -554,6 +658,45 @@ async function probeOutbound(memberTag, group) {
     return false;
   } catch {
     return false;
+  }
+}
+
+async function measureOutboundDelay(memberTag, url, timeout) {
+  if (!manager.getStatus().running) {
+    return { ok: false, error: 'sing-box 未运行或尚未就绪' };
+  }
+
+  const endpoint = `http://127.0.0.1:19090/proxies/${encodeURIComponent(memberTag)}/delay?url=${encodeURIComponent(url)}&timeout=${timeout}`;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch(endpoint, {
+        signal: AbortSignal.timeout(timeout + 1500)
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      if (typeof data?.delay === 'number' && data.delay >= 0) {
+        return {
+          ok: true,
+          delay: data.delay,
+          text: `${data.delay} ms`,
+          checkedAt: new Date().toISOString()
+        };
+      }
+      throw new Error('No delay data');
+    } catch (error) {
+      if (attempt >= 2) {
+        return {
+          ok: false,
+          error: error.message.includes('fetch')
+            ? '测速控制接口未就绪，请先确认 sing-box 已正常启动'
+            : error.message
+        };
+      }
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
   }
 }
 

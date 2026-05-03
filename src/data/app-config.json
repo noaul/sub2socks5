@@ -2,7 +2,7 @@
   "app": {
     "host": "127.0.0.1",
     "port": 18080,
-    "singBoxBinary": "D:\\sub2socks5\\bin\\sing-box.exe",
+    "singBoxBinary": "src\\bin\\sing-box.exe",
     "autoStart": true,
     "logLevel": "info"
   },
@@ -71,7 +71,17 @@
           "SG2-HY2"
         ]
       }
-    ]
+    ],
+    "chains": [
+      {
+        "tag": "链1",
+        "members": [
+          "SG-3",
+          "ss-US-1"
+        ]
+      }
+    ],
+    "disabledSubscriptionTags": []
   },
   "runtimeState": {
     "fallbackGroups": {}
@@ -82,6 +92,13 @@
       "listen": "127.0.0.1",
       "port": 53456,
       "target": "sg",
+      "sniff": true
+    },
+    {
+      "tag": "socks-2",
+      "listen": "127.0.0.1",
+      "port": 54326,
+      "target": "链1",
       "sniff": true
     }
   ]

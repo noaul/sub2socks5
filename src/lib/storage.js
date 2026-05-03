@@ -88,7 +88,9 @@ export const defaultConfig = {
   },
   nodeRegistry: {
     manualNodes: [],
-    groups: []
+    groups: [],
+    chains: [],
+    disabledSubscriptionTags: []
   },
   runtimeState: {
     fallbackGroups: {}
@@ -304,6 +306,19 @@ function migrateConfig(config) {
   }
   if (config.dns.defaultDomainResolver === 'dns-remote') {
     config.dns.defaultDomainResolver = 'dns-bootstrap';
+  }
+  config.nodeRegistry ||= {};
+  if (!Array.isArray(config.nodeRegistry.manualNodes)) {
+    config.nodeRegistry.manualNodes = [];
+  }
+  if (!Array.isArray(config.nodeRegistry.groups)) {
+    config.nodeRegistry.groups = [];
+  }
+  if (!Array.isArray(config.nodeRegistry.chains)) {
+    config.nodeRegistry.chains = [];
+  }
+  if (!Array.isArray(config.nodeRegistry.disabledSubscriptionTags)) {
+    config.nodeRegistry.disabledSubscriptionTags = [];
   }
   return config;
 }

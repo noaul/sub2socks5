@@ -1,8 +1,11 @@
 const statusEl = document.getElementById('node-status');
-const manualNodesEl = document.getElementById('manual-nodes');
 const groupsEl = document.getElementById('groups');
+const chainsEl = document.getElementById('chains');
 const availableNodeListEl = document.getElementById('available-node-list');
-const manualNodeInputEl = document.getElementById('manual-node-input');
+const groupsSectionBodyEl = document.getElementById('groups-section-body');
+const chainsSectionBodyEl = document.getElementById('chains-section-body');
+const toggleGroupsSectionButton = document.getElementById('toggle-groups-section');
+const toggleChainsSectionButton = document.getElementById('toggle-chains-section');
 const NODES_UPDATED_KEY = 'sub2socks5:nodes-updated-at';
 const GROUP_TEST_URL_PRESETS = [
   'https://www.gstatic.com/generate_204',
@@ -14,11 +17,17 @@ let state = {
   subscriptionNodes: [],
   manualNodes: [],
   groups: [],
+  chains: [],
   availableOutbounds: [],
   fallbackStates: {}
 };
 
+let nodeDelayState = {};
 const expandedGroups = new Set();
+const expandedChains = new Set();
+const CHECK_BATCH_SIZE = 5;
+let groupsSectionCollapsed = false;
+let chainsSectionCollapsed = false;
 
 async function load() {
   const response = await fetch('/api/nodes');
@@ -26,18 +35,29 @@ async function load() {
   if (!response.ok) {
     throw new Error(data?.error?.message || '加载节点失败');
   }
-  state = data;
+  state = {
+    ...data,
+    chains: Array.isArray(data.chains) ? data.chains : []
+  };
   render();
 }
 
 function render() {
   renderAvailableNodes();
-  renderManualNodes();
   renderGroups();
+  renderChains();
+  renderSectionToggles();
+}
+
+function renderSectionToggles() {
+  groupsSectionBodyEl.classList.toggle('is-hidden', groupsSectionCollapsed);
+  chainsSectionBodyEl.classList.toggle('is-hidden', chainsSectionCollapsed);
+  toggleGroupsSectionButton.textContent = groupsSectionCollapsed ? '展开' : '收起';
+  toggleChainsSectionButton.textContent = chainsSectionCollapsed ? '展开' : '收起';
 }
 
 function renderAvailableNodes() {
-  const visibleNodes = state.availableOutbounds.filter((item) => !['proxy', 'auto', 'block'].includes(item.tag));
+  const visibleNodes = getSelectableNodes();
   availableNodeListEl.innerHTML = '';
 
   if (!visibleNodes.length) {
@@ -46,44 +66,21 @@ function renderAvailableNodes() {
   }
 
   for (const node of visibleNodes) {
+    const delayState = nodeDelayState[node.tag];
+    const delayText = delayState?.loading ? '测速中...' : delayState?.text || 'check';
     const card = document.createElement('div');
-    card.className = 'node-pill';
+    card.className = 'node-pill node-pill-checkable';
     card.innerHTML = `
-      <div class="node-pill-title">${escapeHtml(node.tag || '')}</div>
-      <div class="node-pill-tags">
-        <span class="node-pill-tag">${escapeHtml(node.type || '')}</span>
-        <span class="node-pill-tag is-source">${escapeHtml(sourceLabel(node.source))}</span>
+      <div class="node-pill-main">
+        <div class="node-pill-title">${escapeHtml(node.tag || '')}</div>
+        <div class="node-pill-tags">
+          <span class="node-pill-tag">${escapeHtml(node.type || '')}</span>
+          <span class="node-pill-tag is-source">${escapeHtml(sourceLabel(node.source))}</span>
+        </div>
       </div>
+      <button type="button" class="node-check-button ${delayState?.loading ? 'is-loading' : ''}" data-check-node="${escapeHtmlAttr(node.tag)}" title="点击测速">${escapeHtml(delayText)}</button>
     `;
     availableNodeListEl.appendChild(card);
-  }
-}
-
-function renderManualNodes() {
-  manualNodesEl.innerHTML = '';
-  if (!state.manualNodes.length) {
-    manualNodesEl.innerHTML = '<div class="timeline-item"><div class="title">暂无手动节点</div></div>';
-    return;
-  }
-
-  for (const [index, node] of state.manualNodes.entries()) {
-    const item = document.createElement('div');
-    item.className = 'timeline-item';
-    item.innerHTML = `
-      <div class="title">手动节点 ${index + 1}</div>
-      <div class="form-grid">
-        <label><span>tag</span><input data-kind="manual" data-index="${index}" data-field="tag" value="${escapeHtmlAttr(node.tag || '')}" /></label>
-        <label><span>type</span><input data-kind="manual" data-index="${index}" data-field="type" value="${escapeHtmlAttr(node.type || 'vless')}" /></label>
-        <label><span>server</span><input data-kind="manual" data-index="${index}" data-field="server" value="${escapeHtmlAttr(node.server || '')}" /></label>
-        <label><span>server_port</span><input data-kind="manual" data-index="${index}" data-field="server_port" type="number" value="${escapeHtmlAttr(String(node.server_port || 443))}" /></label>
-        <label><span>uuid / username</span><input data-kind="manual" data-index="${index}" data-field="uuid" value="${escapeHtmlAttr(node.uuid || '')}" /></label>
-        <label><span>password</span><input data-kind="manual" data-index="${index}" data-field="password" value="${escapeHtmlAttr(node.password || '')}" /></label>
-      </div>
-      <div class="section-heading-actions">
-        <button type="button" data-remove-manual="${index}">删除</button>
-      </div>
-    `;
-    manualNodesEl.appendChild(item);
   }
 }
 
@@ -94,108 +91,155 @@ function renderGroups() {
     return;
   }
 
-  const selectableNodes = getSelectableNodes();
-
+  const selectableNodes = getSelectableNodesWithoutChains();
   for (const [index, group] of state.groups.entries()) {
-    const fallbackState = state.fallbackStates?.[group.tag] || null;
-    const expanded = expandedGroups.has(index);
-    const selectedMembers = Array.isArray(group.members) ? group.members : [];
-    const summaryCards = selectedMembers.map((memberTag) => {
-      const node = selectableNodes.find((item) => item.tag === memberTag);
-      return node ? renderNodePill(node) : '';
-    }).join('');
+    groupsEl.appendChild(buildGroupPanel(index, group, selectableNodes));
+  }
+}
 
-    const statusHtml = group.strategy === 'fallback'
-      ? `
-        <div class="kv-grid">
-          <div class="kv-item">
-            <div class="key">当前活跃节点</div>
-            <div class="value">${escapeHtml(fallbackState?.current || group.members?.[0] || '')}</div>
-          </div>
-          <div class="kv-item">
-            <div class="key">最近切换时间</div>
-            <div class="value">${escapeHtml(fallbackState?.updatedAt || '')}</div>
-          </div>
+function buildGroupPanel(index, group, selectableNodes) {
+  const fallbackState = state.fallbackStates?.[group.tag] || null;
+  const expanded = expandedGroups.has(index);
+  const selectedMembers = Array.isArray(group.members) ? group.members : [];
+  const summaryCards = selectedMembers.map((memberTag) => {
+    const node = selectableNodes.find((item) => item.tag === memberTag);
+    return node ? renderNodePill(node) : '';
+  }).join('');
+
+  const statusHtml = group.strategy === 'fallback'
+    ? `
+      <div class="kv-grid">
+        <div class="kv-item">
+          <div class="key">当前活动节点</div>
+          <div class="value">${escapeHtml(fallbackState?.current || group.members?.[0] || '')}</div>
         </div>
-      `
-      : '';
+        <div class="kv-item">
+          <div class="key">最近切换时间</div>
+          <div class="value">${escapeHtml(fallbackState?.updatedAt || '')}</div>
+        </div>
+      </div>
+    `
+    : '';
+
+  const item = document.createElement('div');
+  item.className = 'timeline-item group-panel';
+  item.innerHTML = `
+    <div class="group-panel-header">
+      <div>
+        <div class="title">${escapeHtml(group.tag || `节点组 ${index + 1}`)}</div>
+        <div class="node-pill-tags">
+          <span class="node-pill-tag">${escapeHtml(group.strategy || 'urltest')}</span>
+          <span class="node-pill-tag is-source">${selectedMembers.length} 个节点</span>
+        </div>
+      </div>
+      <button type="button" class="group-toggle" data-toggle-group="${index}">${expanded ? '收起' : '展开'}</button>
+    </div>
+    <div class="node-pill-grid group-summary">
+      ${summaryCards || '<div class="timeline-item"><div class="title">暂无成员</div></div>'}
+    </div>
+    <div class="group-panel-body ${expanded ? '' : 'is-hidden'}">
+      <div class="form-grid">
+        <label><span>tag</span><input data-kind="group" data-index="${index}" data-field="tag" value="${escapeHtmlAttr(group.tag || '')}" /></label>
+        <label>
+          <span>策略</span>
+          <select data-kind="group" data-index="${index}" data-field="strategy">
+            <option value="urltest" ${group.strategy === 'urltest' ? 'selected' : ''}>urltest</option>
+            <option value="fallback" ${group.strategy === 'fallback' ? 'selected' : ''}>fallback</option>
+          </select>
+        </label>
+        <label>
+          <span>测试地址</span>
+          <select data-kind="group-preset" data-index="${index}">
+            ${buildGroupUrlPresetOptions(group.url)}
+          </select>
+        </label>
+        <label><span>测试间隔</span><input data-kind="group" data-index="${index}" data-field="interval" value="${escapeHtmlAttr(group.interval || '10m')}" /></label>
+        <label><span>超时毫秒</span><input data-kind="group" data-index="${index}" data-field="timeoutMs" type="number" value="${escapeHtmlAttr(String(group.timeoutMs || 5000))}" /></label>
+        <label class="${GROUP_TEST_URL_PRESETS.includes(group.url) ? 'is-hidden' : ''}"><span>自定义测试地址</span><input data-kind="group" data-index="${index}" data-field="url" value="${escapeHtmlAttr(group.url || 'https://www.gstatic.com/generate_204')}" /></label>
+      </div>
+      ${statusHtml}
+      <div class="member-selector">${renderGroupMembers(index, group, selectableNodes)}</div>
+      <div class="section-heading-actions">
+        <button type="button" data-remove-group="${index}">删除</button>
+      </div>
+    </div>
+  `;
+  return item;
+}
+
+function renderChains() {
+  chainsEl.innerHTML = '';
+  if (!state.chains.length) {
+    chainsEl.innerHTML = '<div class="timeline-item"><div class="title">暂无链式代理</div></div>';
+    return;
+  }
+
+  const selectableNodes = getSelectableNodesWithoutChains();
+  for (const [index, chain] of state.chains.entries()) {
+    const expanded = expandedChains.has(index);
+    const selectedMembers = Array.isArray(chain.members) ? chain.members : [];
+    const chainCards = selectedMembers.map((memberTag, memberIndex) => {
+      const node = selectableNodes.find((item) => item.tag === memberTag);
+      const card = node ? renderNodePill(node) : '';
+      const arrow = memberIndex < selectedMembers.length - 1 ? '<div class="chain-arrow">→</div>' : '';
+      return `<div class="chain-segment">${card}${arrow}</div>`;
+    }).join('');
 
     const item = document.createElement('div');
     item.className = 'timeline-item group-panel';
     item.innerHTML = `
       <div class="group-panel-header">
         <div>
-          <div class="title">${escapeHtml(group.tag || `节点组 ${index + 1}`)}</div>
+          <div class="title">${escapeHtml(chain.tag || `链式代理 ${index + 1}`)}</div>
           <div class="node-pill-tags">
-            <span class="node-pill-tag">${escapeHtml(group.strategy || 'urltest')}</span>
+            <span class="node-pill-tag">chain</span>
             <span class="node-pill-tag is-source">${selectedMembers.length} 个节点</span>
           </div>
         </div>
-        <button type="button" class="group-toggle" data-toggle-group="${index}">${expanded ? '收起' : '展开'}</button>
+        <button type="button" class="group-toggle" data-toggle-chain="${index}">${expanded ? '收起' : '展开'}</button>
       </div>
-      <div class="node-pill-grid group-summary">
-        ${summaryCards || '<div class="timeline-item"><div class="title">暂无成员</div></div>'}
-      </div>
-      <div class="group-panel-body ${expanded ? '' : 'is-hidden'}" data-group-body="${index}">
+      <div class="chain-summary">${chainCards || '<div class="timeline-item"><div class="title">暂无成员</div></div>'}</div>
+      <div class="group-panel-body ${expanded ? '' : 'is-hidden'}">
         <div class="form-grid">
-          <label><span>tag</span><input data-kind="group" data-index="${index}" data-field="tag" value="${escapeHtmlAttr(group.tag || '')}" /></label>
-          <label>
-            <span>策略</span>
-            <select data-kind="group" data-index="${index}" data-field="strategy">
-              <option value="urltest" ${group.strategy === 'urltest' ? 'selected' : ''}>urltest</option>
-              <option value="fallback" ${group.strategy === 'fallback' ? 'selected' : ''}>fallback</option>
-            </select>
-          </label>
-          <label>
-            <span>测试地址</span>
-            <select data-kind="group-preset" data-index="${index}" data-field="urlPreset">
-              ${buildGroupUrlPresetOptions(group.url)}
-            </select>
-          </label>
-          <label>
-            <span>测试间隔</span>
-            <input data-kind="group" data-index="${index}" data-field="interval" value="${escapeHtmlAttr(group.interval || '10m')}" />
-          </label>
-          <label>
-            <span>超时毫秒</span>
-            <input data-kind="group" data-index="${index}" data-field="timeoutMs" type="number" min="1000" step="500" value="${escapeHtmlAttr(String(group.timeoutMs || 5000))}" />
-          </label>
-          <label class="${GROUP_TEST_URL_PRESETS.includes(group.url) ? 'is-hidden' : ''}">
-            <span>自定义测试地址</span>
-            <input data-kind="group" data-index="${index}" data-field="url" value="${escapeHtmlAttr(group.url || 'https://www.gstatic.com/generate_204')}" />
-          </label>
+          <label><span>名称</span><input data-kind="chain" data-index="${index}" data-field="tag" value="${escapeHtmlAttr(chain.tag || '')}" /></label>
         </div>
-        ${statusHtml}
-        <div class="member-selector" data-group-members="${index}">
-          ${renderGroupMembers(index, group, selectableNodes)}
-        </div>
+        <div class="member-selector">${renderChainMembers(index, chain, selectableNodes)}</div>
         <div class="section-heading-actions">
-          <button type="button" data-remove-group="${index}">删除</button>
+          <button type="button" data-remove-chain="${index}">删除</button>
         </div>
       </div>
     `;
-    groupsEl.appendChild(item);
+    chainsEl.appendChild(item);
   }
 }
 
 function renderGroupMembers(index, group, selectableNodes) {
   const selected = Array.isArray(group.members) ? group.members : [];
-  const rows = selected.map((memberTag, memberIndex) => {
-    const options = buildMemberOptions(selectableNodes, selected, memberTag);
-    return `
-      <div class="member-row">
-        <select data-group-member-select="${index}" data-member-index="${memberIndex}">
-          ${options}
-        </select>
-        <button type="button" class="member-remove" data-remove-member="${index}" data-member-index="${memberIndex}">删除</button>
-      </div>
-    `;
-  });
-
-  const remaining = selectableNodes.filter((node) => !selected.includes(node.tag));
-  rows.push(`
-    <button type="button" class="member-add" data-add-member="${index}" ${remaining.length ? '' : 'disabled'}>+ 添加节点</button>
+  const rows = selected.map((memberTag, memberIndex) => `
+    <div class="member-row">
+      <select data-group-member-select="${index}" data-member-index="${memberIndex}">
+        ${buildMemberOptions(selectableNodes, selected, memberTag)}
+      </select>
+      <button type="button" class="member-remove" data-remove-member="${index}" data-member-index="${memberIndex}">删除</button>
+    </div>
   `);
+  const remaining = selectableNodes.filter((node) => !selected.includes(node.tag));
+  rows.push(`<button type="button" class="member-add" data-add-member="${index}" ${remaining.length ? '' : 'disabled'}>+ 添加节点</button>`);
+  return rows.join('');
+}
+
+function renderChainMembers(index, chain, selectableNodes) {
+  const selected = Array.isArray(chain.members) ? chain.members : [];
+  const rows = selected.map((memberTag, memberIndex) => `
+    <div class="member-row">
+      <select data-chain-member-select="${index}" data-member-index="${memberIndex}">
+        ${buildMemberOptions(selectableNodes, selected, memberTag)}
+      </select>
+      <button type="button" class="member-remove" data-remove-chain-member="${index}" data-member-index="${memberIndex}">删除</button>
+    </div>
+  `);
+  const remaining = selectableNodes.filter((node) => !selected.includes(node.tag));
+  rows.push(`<button type="button" class="member-add" data-add-chain-member="${index}" ${remaining.length ? '' : 'disabled'}>+ 添加节点</button>`);
   return rows.join('');
 }
 
@@ -212,6 +256,10 @@ function buildGroupUrlPresetOptions(currentUrl) {
     ...GROUP_TEST_URL_PRESETS.map((url) => `<option value="${escapeHtmlAttr(url)}" ${preset === url ? 'selected' : ''}>${escapeHtml(url)}</option>`),
     `<option value="custom" ${preset === 'custom' ? 'selected' : ''}>自定义</option>`
   ].join('');
+}
+
+function getSelectableNodesWithoutChains() {
+  return state.availableOutbounds.filter((item) => !['proxy', 'auto', 'block'].includes(item.tag) && item.source !== 'chain');
 }
 
 function getSelectableNodes() {
@@ -234,8 +282,82 @@ function sourceLabel(source) {
   if (source === 'subscription') return '订阅';
   if (source === 'manual') return '手动';
   if (source === 'group') return '节点组';
+  if (source === 'chain') return '链式代理';
   if (source === 'builtin') return '内置';
   return source || '';
+}
+
+async function checkNode(tag) {
+  nodeDelayState[tag] = { loading: true, text: '测速中...' };
+  renderAvailableNodes();
+  try {
+    const response = await fetch('/api/nodes/check', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ tags: [tag] })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.error?.message || '测速失败');
+    }
+    nodeDelayState[tag] = data.results?.[tag]?.ok
+      ? {
+          text: data.results[tag].text,
+          checkedAt: data.results[tag].checkedAt,
+          checkedTag: data.results[tag].checkedTag
+        }
+      : { text: '失败', error: data.results?.[tag]?.error || '测速失败' };
+    setStatus(`节点 ${tag} 测速完成`, 'success');
+  } catch (error) {
+    nodeDelayState[tag] = { text: '失败', error: error.message };
+    setStatus(error.message, 'error');
+  }
+  renderAvailableNodes();
+}
+
+async function checkAllNodes() {
+  const tags = getSelectableNodes().map((item) => item.tag);
+  if (!tags.length) {
+    setStatus('当前没有可测速节点', 'idle');
+    return;
+  }
+
+  setStatus('正在分批刷新全部节点测速...', 'loading');
+  for (let index = 0; index < tags.length; index += CHECK_BATCH_SIZE) {
+    const batch = tags.slice(index, index + CHECK_BATCH_SIZE);
+    for (const tag of batch) {
+      nodeDelayState[tag] = { loading: true, text: '测速中...' };
+    }
+    renderAvailableNodes();
+
+    try {
+      const response = await fetch('/api/nodes/check', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ tags: batch })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error?.message || '批量测速失败');
+      }
+      for (const tag of batch) {
+        const result = data.results?.[tag];
+        nodeDelayState[tag] = result?.ok
+          ? { text: result.text, checkedAt: result.checkedAt, checkedTag: result.checkedTag }
+          : { text: '失败', error: result?.error || '测速失败' };
+      }
+      renderAvailableNodes();
+    } catch (error) {
+      for (const tag of batch) {
+        nodeDelayState[tag] = { text: '失败', error: error.message };
+      }
+      renderAvailableNodes();
+      setStatus(error.message, 'error');
+      return;
+    }
+  }
+
+  setStatus('全部节点测速完成', 'success');
 }
 
 function setStatus(message, kind = 'idle') {
@@ -260,38 +382,34 @@ document.getElementById('back-home').addEventListener('click', () => {
   window.location.href = '/';
 });
 
-document.getElementById('import-manual-nodes').addEventListener('click', async () => {
-  try {
-    const response = await fetch('/api/nodes/import', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ raw: manualNodeInputEl.value })
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data?.error?.message || '导入失败');
-    }
-    state.manualNodes.push(...(data.nodes || []));
-    manualNodeInputEl.value = '';
-    renderManualNodes();
-    renderAvailableNodes();
-    setStatus(`成功导入 ${data.nodes?.length || 0} 个节点`, 'success');
-  } catch (error) {
-    setStatus(error.message, 'error');
-  }
+document.getElementById('open-node-editor').addEventListener('click', () => {
+  window.location.href = '/nodes-edit.html';
+});
+
+document.getElementById('check-all-nodes').addEventListener('click', () => {
+  checkAllNodes().catch((error) => setStatus(error.message, 'error'));
 });
 
 document.getElementById('add-group').addEventListener('click', () => {
-  state.groups.push({
-    tag: '',
-    strategy: 'urltest',
-    url: 'https://www.gstatic.com/generate_204',
-    interval: '10m',
-    timeoutMs: 5000,
-    members: []
-  });
+  state.groups.push({ tag: '', strategy: 'urltest', url: 'https://www.gstatic.com/generate_204', interval: '10m', timeoutMs: 5000, members: [] });
   expandedGroups.add(state.groups.length - 1);
   renderGroups();
+});
+
+document.getElementById('add-chain').addEventListener('click', () => {
+  state.chains.push({ tag: '', members: [] });
+  expandedChains.add(state.chains.length - 1);
+  renderChains();
+});
+
+toggleGroupsSectionButton.addEventListener('click', () => {
+  groupsSectionCollapsed = !groupsSectionCollapsed;
+  renderSectionToggles();
+});
+
+toggleChainsSectionButton.addEventListener('click', () => {
+  chainsSectionCollapsed = !chainsSectionCollapsed;
+  renderSectionToggles();
 });
 
 document.getElementById('save-nodes').addEventListener('click', async () => {
@@ -301,7 +419,9 @@ document.getElementById('save-nodes').addEventListener('click', async () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         manualNodes: state.manualNodes,
-        groups: state.groups
+        groups: state.groups,
+        chains: state.chains,
+        disabledSubscriptionTags: state.disabledSubscriptionTags || []
       })
     });
     const data = await response.json();
@@ -320,12 +440,6 @@ document.addEventListener('input', (event) => {
   const target = event.target;
   if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
 
-  if (target.dataset.kind === 'manual') {
-    const index = Number(target.dataset.index);
-    const field = target.dataset.field;
-    state.manualNodes[index][field] = field === 'server_port' ? Number(target.value || 0) : target.value;
-  }
-
   if (target.dataset.kind === 'group') {
     const index = Number(target.dataset.index);
     const field = target.dataset.field;
@@ -340,11 +454,24 @@ document.addEventListener('input', (event) => {
     renderGroups();
   }
 
+  if (target.dataset.kind === 'chain') {
+    const index = Number(target.dataset.index);
+    const field = target.dataset.field;
+    state.chains[index][field] = target.value;
+  }
+
   if (target.dataset.groupMemberSelect) {
     const groupIndex = Number(target.dataset.groupMemberSelect);
     const memberIndex = Number(target.dataset.memberIndex);
     state.groups[groupIndex].members[memberIndex] = target.value;
     renderGroups();
+  }
+
+  if (target.dataset.chainMemberSelect) {
+    const chainIndex = Number(target.dataset.chainMemberSelect);
+    const memberIndex = Number(target.dataset.memberIndex);
+    state.chains[chainIndex].members[memberIndex] = target.value;
+    renderChains();
   }
 });
 
@@ -354,33 +481,31 @@ document.addEventListener('click', (event) => {
 
   if (target.dataset.toggleGroup) {
     const groupIndex = Number(target.dataset.toggleGroup);
-    if (expandedGroups.has(groupIndex)) {
-      expandedGroups.delete(groupIndex);
-    } else {
-      expandedGroups.add(groupIndex);
-    }
+    expandedGroups.has(groupIndex) ? expandedGroups.delete(groupIndex) : expandedGroups.add(groupIndex);
     renderGroups();
   }
 
-  if (target.dataset.removeManual) {
-    state.manualNodes.splice(Number(target.dataset.removeManual), 1);
-    renderManualNodes();
-    renderAvailableNodes();
+  if (target.dataset.toggleChain) {
+    const chainIndex = Number(target.dataset.toggleChain);
+    expandedChains.has(chainIndex) ? expandedChains.delete(chainIndex) : expandedChains.add(chainIndex);
+    renderChains();
   }
 
   if (target.dataset.removeGroup) {
     const index = Number(target.dataset.removeGroup);
     state.groups.splice(index, 1);
-    expandedGroups.delete(index);
-    const next = [...expandedGroups].map((item) => (item > index ? item - 1 : item));
-    expandedGroups.clear();
-    for (const itemIndex of next) expandedGroups.add(itemIndex);
     renderGroups();
+  }
+
+  if (target.dataset.removeChain) {
+    const index = Number(target.dataset.removeChain);
+    state.chains.splice(index, 1);
+    renderChains();
   }
 
   if (target.dataset.addMember) {
     const groupIndex = Number(target.dataset.addMember);
-    const selectableNodes = getSelectableNodes();
+    const selectableNodes = getSelectableNodesWithoutChains();
     const selected = new Set(state.groups[groupIndex].members || []);
     const nextNode = selectableNodes.find((node) => !selected.has(node.tag));
     if (nextNode) {
@@ -389,11 +514,33 @@ document.addEventListener('click', (event) => {
     }
   }
 
+  if (target.dataset.addChainMember) {
+    const chainIndex = Number(target.dataset.addChainMember);
+    const selectableNodes = getSelectableNodesWithoutChains();
+    const selected = new Set(state.chains[chainIndex].members || []);
+    const nextNode = selectableNodes.find((node) => !selected.has(node.tag));
+    if (nextNode) {
+      state.chains[chainIndex].members.push(nextNode.tag);
+      renderChains();
+    }
+  }
+
   if (target.dataset.removeMember) {
     const groupIndex = Number(target.dataset.removeMember);
     const memberIndex = Number(target.dataset.memberIndex);
     state.groups[groupIndex].members.splice(memberIndex, 1);
     renderGroups();
+  }
+
+  if (target.dataset.removeChainMember) {
+    const chainIndex = Number(target.dataset.removeChainMember);
+    const memberIndex = Number(target.dataset.memberIndex);
+    state.chains[chainIndex].members.splice(memberIndex, 1);
+    renderChains();
+  }
+
+  if (target.dataset.checkNode) {
+    checkNode(target.dataset.checkNode).catch((error) => setStatus(error.message, 'error'));
   }
 });
 
