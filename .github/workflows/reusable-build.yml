@@ -2,6 +2,11 @@ name: Reusable Build
 
 on:
   workflow_call:
+    inputs:
+      package_zip:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -55,13 +60,13 @@ jobs:
         run: npm run build:sea
 
       - name: Package artifact (Windows)
-        if: runner.os == 'Windows'
+        if: inputs.package_zip && runner.os == 'Windows'
         shell: pwsh
         run: |
           Compress-Archive -Path dist/${{ matrix.binary_name }} -DestinationPath dist/${{ matrix.archive_name }} -Force
 
       - name: Package artifact (Linux/macOS)
-        if: runner.os != 'Windows'
+        if: inputs.package_zip && runner.os != 'Windows'
         shell: bash
         run: |
           cd dist
@@ -71,5 +76,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target_name }}
-          path: dist/${{ matrix.archive_name }}
+          path: ${{ inputs.package_zip && format('dist/{0}', matrix.archive_name) || format('dist/{0}', matrix.binary_name) }}
           if-no-files-found: error
