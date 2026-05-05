@@ -504,7 +504,13 @@ http://127.0.0.1:18080
 2. 选择 `Build`
 3. 点击 `Run workflow`
 
-构建完成后，可在该次 workflow 的 `Artifacts` 中下载各平台压缩包。
+构建完成后，可在该次 workflow 的 `Artifacts` 中下载各平台单个二进制文件。
+
+说明：
+
+- `Build` 工作流不会先手动打 zip
+- GitHub Actions 下载 artifact 时仍会以 GitHub 自身的 artifact 压缩形式提供
+- 因此 `Build` 用于验证构建是否成功，而不是提供最终发布压缩包
 
 ### 手动发布 Release
 
@@ -518,6 +524,7 @@ http://127.0.0.1:18080
 `Release` 工作流会：
 
 - 自动构建全部平台/架构产物
+- 自动按平台/架构分别打包 zip
 - 自动收集所有 zip
 - 自动创建或更新对应的 GitHub Release
 - 自动把所有 zip 上传到 Release 附件
