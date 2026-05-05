@@ -592,9 +592,9 @@ npm run build:sea
 
 - `scripts/build-sea.mjs`
   - 负责收集静态资源、生成 SEA blob，并向 `node.exe` 注入 blob
-- `scripts/sea-entry.mjs`
-  - 作为 SEA 的 ESM 入口
-  - 直接以 ESM 方式启动真正的服务端逻辑
+- `scripts/sea-entry.cjs`
+  - 作为 SEA 的 CommonJS 启动封装入口
+  - 在 CJS 环境中通过动态 `import()` 启动真正的 ESM 服务端逻辑
 - `src/server.js`
   - 已改为可复用的 `startServer()` 启动形式
 - `src/lib/storage.js`
@@ -611,12 +611,17 @@ npm run build:sea
   - `data`
   - `runtime`
   - `bin`
+- 源码运行 `server.js` 时，运行目录固定为 `src` 目录
 
 ### 已处理的问题
 
 - 首次运行缺少配置文件时自动生成默认配置
 - 修复 SEA 模式下误把新建的 `data/runtime/bin` 当作旧目录迁移的问题
-- 将 SEA 构建入口改为 ESM，避免 `import.meta` 在 `cjs` 输出下产生警告
+- 保持 SEA 入口为 CJS 封装，以兼容 Node SEA 当前仅支持 CommonJS 嵌入入口的限制
+- 移除 `storage.js` 对 `import.meta` 的路径依赖
+- 统一路径语义为：
+  - 源码模式使用 `src` 目录
+  - SEA 模式使用 exe 同级目录
 
 ### 当前注意事项
 
@@ -624,7 +629,8 @@ npm run build:sea
   - 这是将应用 blob 注入 `node.exe` 后的常见现象
   - 不代表构建失败
   - 如果用于正式分发，建议重新进行代码签名
-- 当前版本已改为 `esm` 构建入口，`import.meta` 警告应不再出现
+- Node SEA 当前运行入口仍受 CommonJS 限制
+- `src/server.js` 与业务代码主体仍可继续保持 ESM 结构
 
 ---
 

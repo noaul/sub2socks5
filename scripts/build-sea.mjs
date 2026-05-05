@@ -12,7 +12,7 @@ const projectDir = path.dirname(scriptDir);
 const distDir = path.join(projectDir, 'dist');
 const seaPrepDir = path.join(projectDir, 'sea-prep');
 const assetsJsonPath = path.join(seaPrepDir, 'public-assets.json');
-const bundlePath = path.join(seaPrepDir, 'sea-entry.mjs');
+const bundlePath = path.join(seaPrepDir, 'sea-entry.cjs');
 const seaConfigPath = path.join(seaPrepDir, 'sea-config.json');
 const blobPath = path.join(seaPrepDir, 'sea-prep.blob');
 const outputBinaryName = getOutputBinaryName();
@@ -29,10 +29,10 @@ const assets = await collectAssets(publicDir, publicDir);
 await writeFile(assetsJsonPath, JSON.stringify(assets, null, 2), 'utf8');
 
 await build({
-  entryPoints: [path.join(projectDir, 'scripts', 'sea-entry.mjs')],
+  entryPoints: [path.join(projectDir, 'scripts', 'sea-entry.cjs')],
   bundle: true,
   platform: 'node',
-  format: 'esm',
+  format: 'cjs',
   target: 'node24',
   outfile: bundlePath,
   banner: {
