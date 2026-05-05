@@ -47,7 +47,7 @@ export const defaultConfig = {
     strategy: 'prefer_ipv4',
     remotePreset: 'cloudflare',
     remoteUrl: 'https://cloudflare-dns.com/dns-query',
-    bootstrapServer: '223.5.5.5',
+    bootstrapServer: '1.1.1.1',
     servers: [
       {
         tag: 'dns-remote',
@@ -59,7 +59,7 @@ export const defaultConfig = {
       {
         tag: 'dns-bootstrap',
         type: 'udp',
-        server: '223.5.5.5',
+        server: '1.1.1.1',
         server_port: 53
       },
       {
@@ -297,7 +297,7 @@ function migrateConfig(config) {
     config.dns.remoteUrl = deriveRemoteDnsUrl(config.dns.servers);
   }
   if (!config.dns.bootstrapServer) {
-    config.dns.bootstrapServer = '223.5.5.5';
+    config.dns.bootstrapServer = '1.1.1.1';
   }
   if (!config.dns.remoteUrl) {
     config.dns.remoteUrl = 'https://cloudflare-dns.com/dns-query';

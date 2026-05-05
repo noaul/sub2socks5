@@ -217,7 +217,7 @@ function renderDnsPresetUi() {
   dnsRemoteUrlWrap.classList.toggle('is-hidden', !custom);
   fields.dnsRemoteUrl.disabled = !custom;
 
-  const bootstrapPreset = fields.dnsBootstrapPreset.value || '223.5.5.5';
+  const bootstrapPreset = fields.dnsBootstrapPreset.value || '1.1.1.1';
   const bootstrapCustom = bootstrapPreset === 'custom';
   dnsBootstrapWrap.classList.toggle('is-hidden', !bootstrapCustom);
   fields.dnsBootstrap.disabled = !bootstrapCustom;
@@ -440,7 +440,6 @@ function parseFormConfig(validateRequired = false) {
     }));
 
     if (validateRequired) {
-      if (!next.subscription.urls.length) throw new Error('至少需要一个订阅地址');
       if (!next.app.host) throw new Error('Web UI 监听地址不能为空');
       if (!Number.isInteger(next.app.port) || next.app.port <= 0) throw new Error('Web UI 端口无效');
       if (!next.app.singBoxBinary) throw new Error('sing-box 二进制路径不能为空');
@@ -493,7 +492,7 @@ function fillForm(config) {
   fields.dnsRemotePreset.value = config.dns?.remotePreset || inferDnsPreset(config.dns?.remoteUrl);
   fields.dnsRemoteUrl.value = config.dns?.remoteUrl || DNS_PRESET_URLS.cloudflare;
   fields.dnsBootstrapPreset.value = inferBootstrapPreset(config.dns?.bootstrapServer);
-  fields.dnsBootstrap.value = config.dns?.bootstrapServer || '223.5.5.5';
+  fields.dnsBootstrap.value = config.dns?.bootstrapServer || '1.1.1.1';
   formPorts = normalizePorts(config.ports || []);
   renderRouteFinalOptions();
   fields.routeFinal.value = config.routing?.routeFinal || 'proxy';
