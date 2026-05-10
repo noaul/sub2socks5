@@ -1,0 +1,11 @@
+services:
+  sub2socks5:
+    build: .
+    container_name: sub2socks5
+    restart: unless-stopped
+    ports:
+      - "18080:18080"
+    volumes:
+      - ./data:/app/src/data
+      - ./runtime:/app/src/runtime
+      - ./bin:/app/src/bin
