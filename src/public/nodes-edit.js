@@ -14,34 +14,34 @@ const NODES_UPDATED_KEY = 'sub2socks5:nodes-updated-at';
 
 const FORM_PROTOCOLS = {
   vless: [
-    { key: 'uuid', label: 'UUID' },
-    { key: 'flow', label: 'Flow' },
-    { key: 'tlsServerName', label: 'SNI' }
+    { key: 'uuid', labelKey: 'nodesEdit.field.uuid' },
+    { key: 'flow', labelKey: 'nodesEdit.field.flow' },
+    { key: 'tlsServerName', labelKey: 'nodesEdit.field.sni' }
   ],
   vmess: [
-    { key: 'uuid', label: 'UUID' },
-    { key: 'security', label: 'Security', defaultValue: 'auto' },
-    { key: 'alter_id', label: 'Alter ID', defaultValue: '0' }
+    { key: 'uuid', labelKey: 'nodesEdit.field.uuid' },
+    { key: 'security', labelKey: 'nodesEdit.field.security', defaultValue: 'auto' },
+    { key: 'alter_id', labelKey: 'nodesEdit.field.alterId', defaultValue: '0' }
   ],
   trojan: [
-    { key: 'password', label: 'Password' },
-    { key: 'tlsServerName', label: 'SNI' }
+    { key: 'password', labelKey: 'nodesEdit.field.password' },
+    { key: 'tlsServerName', labelKey: 'nodesEdit.field.sni' }
   ],
   shadowsocks: [
-    { key: 'method', label: 'Method' },
-    { key: 'password', label: 'Password' }
+    { key: 'method', labelKey: 'nodesEdit.field.method' },
+    { key: 'password', labelKey: 'nodesEdit.field.password' }
   ],
   socks: [
-    { key: 'username', label: 'Username' },
-    { key: 'password', label: 'Password' }
+    { key: 'username', labelKey: 'nodesEdit.field.username' },
+    { key: 'password', labelKey: 'nodesEdit.field.password' }
   ],
   hysteria2: [
-    { key: 'password', label: 'Password' },
-    { key: 'tlsServerName', label: 'SNI' }
+    { key: 'password', labelKey: 'nodesEdit.field.password' },
+    { key: 'tlsServerName', labelKey: 'nodesEdit.field.sni' }
   ],
   tuic: [
-    { key: 'uuid', label: 'UUID' },
-    { key: 'password', label: 'Password' }
+    { key: 'uuid', labelKey: 'nodesEdit.field.uuid' },
+    { key: 'password', labelKey: 'nodesEdit.field.password' }
   ]
 };
 
@@ -99,7 +99,7 @@ function renderFormFields() {
   const fields = FORM_PROTOCOLS[type] || [];
   formFieldsEl.innerHTML = fields.map((field) => `
     <label>
-      <span>${escapeHtml(field.label)}</span>
+      <span>${escapeHtml(t(field.labelKey))}</span>
       <input data-manual-field="${escapeHtml(field.key)}" value="${escapeHtml(field.defaultValue || '')}" />
     </label>
   `).join('');

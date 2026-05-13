@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Config - sub2socks5</title>
+  <title data-i18n="pageTitle.config">配置 - sub2socks5</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -13,44 +13,44 @@
   <main class="page-content">
     <div class="page-header">
       <div>
-        <h1 data-i18n="config.title">Configuration</h1>
-        <p class="page-subtitle" data-i18n="config.subtitle">Set the Web UI, DNS, subscription URLs, and SOCKS5 services. Each field includes a short filling guide.</p>
+        <h1 data-i18n="config.title">配置</h1>
+        <p class="page-subtitle" data-i18n="config.subtitle">设置 Web UI、DNS、订阅地址和 SOCKS5 服务。每个字段下方都有填写建议。</p>
       </div>
       <div class="page-actions">
-        <div id="editor-status" class="editor-status is-saved" data-i18n="config.saved">Saved</div>
+        <div id="editor-status" class="editor-status is-saved" data-i18n="config.saved">已保存</div>
         <div class="view-switch">
-          <button id="switch-form" class="switch-button is-active" type="button" data-i18n="config.form">Form</button>
+          <button id="switch-form" class="switch-button is-active" type="button" data-i18n="config.form">表单</button>
           <button id="switch-json" class="switch-button" type="button" data-i18n="config.json">JSON</button>
         </div>
-        <button id="save-config" type="button" data-i18n="config.save">Save</button>
+        <button id="save-config" type="button" data-i18n="config.save">保存</button>
       </div>
     </div>
-    <div id="status-bar" class="status-bar is-idle" role="status" aria-live="polite" data-i18n="config.loading">Loading...</div>
+    <div id="status-bar" class="status-bar is-idle" role="status" aria-live="polite" data-i18n="config.loading">正在加载...</div>
 
     <!-- Form view -->
     <div id="form-view" class="config-view">
       <section class="page-section">
         <div class="section-heading">
-          <h2 data-i18n="config.basic">Basic Settings</h2>
+          <h2 data-i18n="config.basic">基础设置</h2>
         </div>
         <div class="form-grid form-grid-basic">
           <label>
-            <span data-i18n="label.appHost">Web UI Host</span>
+            <span data-i18n="label.appHost">Web UI 监听地址</span>
             <input id="field-app-host" type="text" />
-            <small id="help-app-host" class="field-help" data-i18n="help.appHost">Use 127.0.0.1 for local-only access. Use 0.0.0.0 for LAN/VPS access, then restrict source IPs with a firewall.</small>
+            <small id="help-app-host" class="field-help" data-i18n="help.appHost">本机使用填 127.0.0.1；给局域网或 VPS 访问填 0.0.0.0，并配合防火墙限制来源。</small>
           </label>
           <label>
-            <span data-i18n="label.appPort">Web UI Port</span>
+            <span data-i18n="label.appPort">Web UI 端口</span>
             <input id="field-app-port" type="number" min="1" step="1" />
-            <small id="help-app-port" class="field-help" data-i18n="help.appPort">Port for this Web UI. Default is 18080; after changing it, visit the new port.</small>
+            <small id="help-app-port" class="field-help" data-i18n="help.appPort">Web 管理页面端口，默认 18080；改动后需要用新端口访问。</small>
           </label>
           <label>
-            <span data-i18n="label.appBinary">sing-box Binary Path</span>
+            <span data-i18n="label.appBinary">sing-box 二进制路径</span>
             <input id="field-app-binary" type="text" />
-            <small id="help-app-binary" class="field-help" data-i18n="help.appBinary">Path to the sing-box executable. If you download it from the Kernel page, the default usually works.</small>
+            <small id="help-app-binary" class="field-help" data-i18n="help.appBinary">sing-box 可执行文件路径。使用内核页下载时通常保持默认即可。</small>
           </label>
           <label>
-            <span data-i18n="label.appLogLevel">Log Level</span>
+            <span data-i18n="label.appLogLevel">日志级别</span>
             <select id="field-app-log-level">
               <option value="trace">trace</option>
               <option value="debug">debug</option>
@@ -60,80 +60,80 @@
               <option value="fatal">fatal</option>
               <option value="panic">panic</option>
             </select>
-            <small id="help-app-log-level" class="field-help" data-i18n="help.appLogLevel">Use info for normal use, debug for troubleshooting. trace can generate many logs.</small>
+            <small id="help-app-log-level" class="field-help" data-i18n="help.appLogLevel">普通使用选 info；排查问题选 debug；trace 会产生大量日志。</small>
           </label>
           <label class="form-row-3 checkbox-field">
-            <span data-i18n="label.appAutoStart">Auto Start</span>
+            <span data-i18n="label.appAutoStart">自动启动</span>
             <input id="field-app-auto-start" type="checkbox" />
-            <small id="help-app-auto-start" class="field-help" data-i18n="help.appAutoStart">When enabled, the app refreshes subscriptions and starts sing-box on launch.</small>
+            <small id="help-app-auto-start" class="field-help" data-i18n="help.appAutoStart">勾选后程序启动时会自动刷新订阅并启动 sing-box。</small>
           </label>
         </div>
       </section>
 
       <section class="page-section">
         <div class="section-heading">
-          <h2 data-i18n="config.dns">DNS Settings</h2>
+          <h2 data-i18n="config.dns">DNS 设置</h2>
         </div>
         <div class="form-grid form-grid-basic">
           <label>
-            <span data-i18n="label.dnsStrategy">DNS Strategy</span>
+            <span data-i18n="label.dnsStrategy">DNS 策略</span>
             <select id="field-dns-strategy">
               <option value="prefer_ipv4">prefer_ipv4</option>
               <option value="prefer_ipv6">prefer_ipv6</option>
               <option value="ipv4_only">ipv4_only</option>
               <option value="ipv6_only">ipv6_only</option>
             </select>
-            <small id="help-dns-strategy" class="field-help" data-i18n="help.dnsStrategy">prefer_ipv4 works for most networks. Use prefer_ipv6 or ipv6_only only when you need IPv6.</small>
+            <small id="help-dns-strategy" class="field-help" data-i18n="help.dnsStrategy">大多数网络选 prefer_ipv4；需要 IPv6 时选 prefer_ipv6 或 ipv6_only。</small>
           </label>
           <label>
-            <span data-i18n="label.dohServer">DoH Server</span>
+            <span data-i18n="label.dohServer">DoH 服务器</span>
             <select id="field-dns-remote-preset">
               <option value="google">https://dns.google/dns-query</option>
               <option value="cloudflare">https://cloudflare-dns.com/dns-query</option>
-              <option value="custom">Custom</option>
+              <option value="custom">自定义</option>
             </select>
-            <small id="help-dns-remote-preset" class="field-help" data-i18n="help.dnsRemotePreset">Choose a common DoH provider, or choose Custom and fill the URL below.</small>
+            <small id="help-dns-remote-preset" class="field-help" data-i18n="help.dnsRemotePreset">选择常用 DoH 服务；需要自定义时选择“自定义”并填写下方地址。</small>
           </label>
           <label id="field-dns-remote-url-wrap" class="form-row-custom">
-            <span data-i18n="label.customDohUrl">Custom DoH URL</span>
+            <span data-i18n="label.customDohUrl">自定义 DoH 地址</span>
             <input id="field-dns-remote-url" type="text" placeholder="https://1.1.1.1/dns-query" />
-            <small id="help-dns-remote-url" class="field-help" data-i18n="help.dnsRemoteUrl">Enter the full HTTPS DoH URL, for example https://dns.google/dns-query.</small>
+            <small id="help-dns-remote-url" class="field-help" data-i18n="help.dnsRemoteUrl">填写完整 HTTPS DoH 地址，例如 https://dns.google/dns-query。</small>
           </label>
           <label>
-            <span data-i18n="label.bootstrapDns">Bootstrap DNS</span>
+            <span data-i18n="label.bootstrapDns">引导 DNS</span>
             <select id="field-dns-bootstrap-preset">
               <option value="1.1.1.1">1.1.1.1</option>
               <option value="8.8.8.8">8.8.8.8</option>
               <option value="223.5.5.5">223.5.5.5</option>
-              <option value="custom">Custom</option>
+              <option value="custom">自定义</option>
             </select>
-            <small id="help-dns-bootstrap-preset" class="field-help" data-i18n="help.dnsBootstrapPreset">DNS server used to resolve the DoH hostname. 223.5.5.5 can be useful on China-based VPS networks.</small>
+            <small id="help-dns-bootstrap-preset" class="field-help" data-i18n="help.dnsBootstrapPreset">用于解析 DoH 域名的上游 DNS；国内 VPS 可选 223.5.5.5。</small>
           </label>
           <label id="field-dns-bootstrap-wrap" class="form-row-custom is-hidden">
-            <span data-i18n="label.customBootstrapDns">Custom Bootstrap DNS</span>
+            <span data-i18n="label.customBootstrapDns">自定义引导 DNS</span>
             <input id="field-dns-bootstrap" type="text" placeholder="223.5.5.5" />
-            <small id="help-dns-bootstrap" class="field-help" data-i18n="help.dnsBootstrap">Enter a plain IP address, for example 1.1.1.1 or 223.5.5.5.</small>
+            <small id="help-dns-bootstrap" class="field-help" data-i18n="help.dnsBootstrap">填写纯 IP 地址，例如 1.1.1.1 或 223.5.5.5。</small>
           </label>
           <label>
-            <span data-i18n="label.routeFinal">Default Route Outbound</span>
+            <span data-i18n="label.routeFinal">默认出口</span>
             <select id="field-route-final"></select>
-            <small id="help-route-final" class="field-help" data-i18n="help.routeFinal">Outbound used when no route rule matches. Usually choose proxy or a node group.</small>
+            <small id="help-route-final" class="field-help" data-i18n="help.routeFinal">没有匹配规则时使用的默认出口；通常选择 proxy 或某个节点组。</small>
           </label>
         </div>
       </section>
 
       <section class="page-section">
         <div class="section-heading">
-          <h2 data-i18n="config.subscriptionUrls">Subscription URLs</h2>
-          <button id="add-subscription-url" type="button" data-i18n="action.addUrl">+ Add URL</button>
+          <h2 data-i18n="config.subscriptionUrls">订阅地址</h2>
+          <button id="add-subscription-url" type="button" data-i18n="action.addUrl">+ 添加地址</button>
         </div>
         <div id="subscription-urls" class="timeline"></div>
       </section>
 
       <section class="page-section">
         <div class="section-heading">
-          <h2 data-i18n="config.socksServices">SOCKS5 Services</h2>
-          <button id="add-socks-service" type="button" data-i18n="action.addService">+ Add Service</button>
+          <h2 data-i18n="config.socksServices">SOCKS5 服务</h2>
+          <button id="add-socks-service" type="button" data-i18n="action.addService">+ 添加服务</button>
         </div>
         <div id="socks-services" class="timeline"></div>
       </section>
@@ -147,9 +147,9 @@
     <!-- Generated config -->
     <section class="page-section" style="margin-top: 24px;">
       <div class="section-heading">
-        <h2 data-i18n="config.generated">Generated Config</h2>
+        <h2 data-i18n="config.generated">生成配置</h2>
         <div class="view-switch">
-          <button id="switch-generated-form" class="switch-button is-active" type="button" data-i18n="config.summary">Summary</button>
+          <button id="switch-generated-form" class="switch-button is-active" type="button" data-i18n="config.summary">摘要</button>
           <button id="switch-generated-json" class="switch-button" type="button" data-i18n="config.json">JSON</button>
         </div>
       </div>

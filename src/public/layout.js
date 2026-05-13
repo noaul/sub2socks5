@@ -68,7 +68,7 @@ const TRANSLATIONS = {
     'help.appLogLevel': '普通使用选 info；排查问题选 debug；trace 会产生大量日志。',
     'help.appAutoStart': '勾选后程序启动时会自动刷新订阅并启动 sing-box。',
     'help.dnsStrategy': '大多数网络选 prefer_ipv4；需要 IPv6 时选 prefer_ipv6 或 ipv6_only。',
-    'help.dnsRemotePreset': '选择常用 DoH 服务；需要自定义时选择 Custom 并填写下方地址。',
+    'help.dnsRemotePreset': '选择常用 DoH 服务；需要自定义时选择“自定义”并填写下方地址。',
     'help.dnsRemoteUrl': '填写完整 HTTPS DoH 地址，例如 https://dns.google/dns-query。',
     'help.dnsBootstrapPreset': '用于解析 DoH 域名的上游 DNS；国内 VPS 可选 223.5.5.5。',
     'help.dnsBootstrap': '填写纯 IP 地址，例如 1.1.1.1 或 223.5.5.5。',
@@ -108,6 +108,8 @@ const TRANSLATIONS = {
     'common.noMembers': '暂无成员',
     'common.nodesCount': '{count} 个节点',
     'common.unnamed': '未命名',
+    'common.yes': '是',
+    'common.no': '否',
     'status.actionProgress': '{label}进行中...',
     'status.actionDone': '{label}完成',
     'status.actionFailed': '{label}失败：{error}',
@@ -119,6 +121,7 @@ const TRANSLATIONS = {
     'status.configSaved': '配置已保存',
     'pageTitle.dashboard': '仪表盘 - sub2socks5',
     'pageTitle.kernel': '内核 - sub2socks5',
+    'pageTitle.config': '配置 - sub2socks5',
     'pageTitle.logs': '日志 - sub2socks5',
     'pageTitle.nodes': '节点 - sub2socks5',
     'pageTitle.nodesEdit': '节点编辑 - sub2socks5',
@@ -152,6 +155,34 @@ const TRANSLATIONS = {
     'dashboard.notInstalled': '未安装',
     'dashboard.noSocksServices': '未配置 SOCKS5 服务',
     'dashboard.nodesBadge': '{count} 个节点',
+    'summary.stored': '已保存架构',
+    'summary.platform': '平台',
+    'summary.os': '系统',
+    'summary.archName': '架构名称',
+    'summary.assetSuffix': '资源后缀',
+    'summary.executable': '可执行文件',
+    'summary.installed': '已安装',
+    'summary.binaryPath': '二进制路径',
+    'summary.installedVersion': '已安装版本',
+    'summary.plannedVersion': '计划版本',
+    'summary.plannedAsset': '计划资源',
+    'summary.releaseListCount': '版本数量',
+    'summary.updatedAt': '更新时间',
+    'summary.nodeCount': '节点数量',
+    'summary.warningCount': '警告数量',
+    'summary.firstNode': '首个节点',
+    'summary.warnings': '警告',
+    'summary.rawLength': '原始长度',
+    'summary.state': '状态',
+    'summary.running': '运行中',
+    'summary.logCount': '日志数量',
+    'summary.latestLog': '最新日志',
+    'summary.inboundCount': '入站数量',
+    'summary.outboundCount': '出站数量',
+    'summary.routeRuleCount': '路由规则数量',
+    'summary.dnsServerCount': 'DNS 服务器数量',
+    'summary.finalOutbound': '最终出口',
+    'summary.logLevel': '日志级别',
     'kernel.title': '内核管理',
     'kernel.subtitle': '检测系统架构，选择并下载 sing-box 内核。',
     'kernel.architectureVersion': '架构与版本',
@@ -217,7 +248,7 @@ const TRANSLATIONS = {
     'nodesEdit.importManual': '导入手动节点',
     'nodesEdit.currentNodes': '当前节点',
     'nodesEdit.form': '表单',
-    'nodesEdit.rawJson': 'Raw / JSON',
+    'nodesEdit.rawJson': '原始 / JSON',
     'nodesEdit.protocol': '协议',
     'nodesEdit.nodeName': '节点名称',
     'nodesEdit.server': '服务器',
@@ -225,6 +256,14 @@ const TRANSLATIONS = {
     'nodesEdit.addNode': '添加节点',
     'nodesEdit.importNodes': '导入节点',
     'nodesEdit.rawPlaceholder': '支持 vless://、vmess://、trojan://、ss://、socks5:// 等。',
+    'nodesEdit.field.uuid': 'UUID',
+    'nodesEdit.field.flow': '流控',
+    'nodesEdit.field.sni': 'SNI',
+    'nodesEdit.field.security': '加密方式',
+    'nodesEdit.field.alterId': 'Alter ID',
+    'nodesEdit.field.password': '密码',
+    'nodesEdit.field.method': '加密方法',
+    'nodesEdit.field.username': '用户名',
     'nodesEdit.loadFailed': '加载节点失败',
     'nodesEdit.deleteNode': '删除节点',
     'nodesEdit.enableNode': '启用节点',
@@ -339,6 +378,8 @@ const TRANSLATIONS = {
     'common.noMembers': 'No members',
     'common.nodesCount': '{count} nodes',
     'common.unnamed': 'unnamed',
+    'common.yes': 'Yes',
+    'common.no': 'No',
     'status.actionProgress': '{label}...',
     'status.actionDone': '{label} done',
     'status.actionFailed': '{label} failed: {error}',
@@ -350,6 +391,7 @@ const TRANSLATIONS = {
     'status.configSaved': 'Config saved',
     'pageTitle.dashboard': 'Dashboard - sub2socks5',
     'pageTitle.kernel': 'Kernel - sub2socks5',
+    'pageTitle.config': 'Config - sub2socks5',
     'pageTitle.logs': 'Logs - sub2socks5',
     'pageTitle.nodes': 'Nodes - sub2socks5',
     'pageTitle.nodesEdit': 'Node Editor - sub2socks5',
@@ -383,6 +425,34 @@ const TRANSLATIONS = {
     'dashboard.notInstalled': 'Not installed',
     'dashboard.noSocksServices': 'No SOCKS5 services configured',
     'dashboard.nodesBadge': '{count} nodes',
+    'summary.stored': 'Stored Architecture',
+    'summary.platform': 'Platform',
+    'summary.os': 'OS',
+    'summary.archName': 'Architecture Name',
+    'summary.assetSuffix': 'Asset Suffix',
+    'summary.executable': 'Executable',
+    'summary.installed': 'Installed',
+    'summary.binaryPath': 'Binary Path',
+    'summary.installedVersion': 'Installed Version',
+    'summary.plannedVersion': 'Planned Version',
+    'summary.plannedAsset': 'Planned Asset',
+    'summary.releaseListCount': 'Release Count',
+    'summary.updatedAt': 'Updated At',
+    'summary.nodeCount': 'Node Count',
+    'summary.warningCount': 'Warning Count',
+    'summary.firstNode': 'First Node',
+    'summary.warnings': 'Warnings',
+    'summary.rawLength': 'Raw Length',
+    'summary.state': 'State',
+    'summary.running': 'Running',
+    'summary.logCount': 'Log Count',
+    'summary.latestLog': 'Latest Log',
+    'summary.inboundCount': 'Inbound Count',
+    'summary.outboundCount': 'Outbound Count',
+    'summary.routeRuleCount': 'Route Rule Count',
+    'summary.dnsServerCount': 'DNS Server Count',
+    'summary.finalOutbound': 'Final Outbound',
+    'summary.logLevel': 'Log Level',
     'kernel.title': 'Kernel Management',
     'kernel.subtitle': 'Detect architecture, select and download sing-box kernel.',
     'kernel.architectureVersion': 'Architecture & Version',
@@ -456,6 +526,14 @@ const TRANSLATIONS = {
     'nodesEdit.addNode': 'Add Node',
     'nodesEdit.importNodes': 'Import Nodes',
     'nodesEdit.rawPlaceholder': 'Supports vless://, vmess://, trojan://, ss://, socks5:// etc.',
+    'nodesEdit.field.uuid': 'UUID',
+    'nodesEdit.field.flow': 'Flow',
+    'nodesEdit.field.sni': 'SNI',
+    'nodesEdit.field.security': 'Security',
+    'nodesEdit.field.alterId': 'Alter ID',
+    'nodesEdit.field.password': 'Password',
+    'nodesEdit.field.method': 'Method',
+    'nodesEdit.field.username': 'Username',
     'nodesEdit.loadFailed': 'Failed to load nodes',
     'nodesEdit.deleteNode': 'Delete node',
     'nodesEdit.enableNode': 'Enable node',
@@ -506,6 +584,37 @@ export function getLanguage() {
   return currentLanguage;
 }
 
+const SUMMARY_LABEL_KEYS = {
+  stored: 'summary.stored',
+  platform: 'summary.platform',
+  os: 'summary.os',
+  archName: 'summary.archName',
+  assetSuffix: 'summary.assetSuffix',
+  executable: 'summary.executable',
+  installed: 'summary.installed',
+  binaryPath: 'summary.binaryPath',
+  installedVersion: 'summary.installedVersion',
+  plannedVersion: 'summary.plannedVersion',
+  plannedAsset: 'summary.plannedAsset',
+  releaseListCount: 'summary.releaseListCount',
+  updatedAt: 'summary.updatedAt',
+  nodeCount: 'summary.nodeCount',
+  warningCount: 'summary.warningCount',
+  firstNode: 'summary.firstNode',
+  warnings: 'summary.warnings',
+  rawLength: 'summary.rawLength',
+  state: 'summary.state',
+  running: 'summary.running',
+  logCount: 'summary.logCount',
+  latestLog: 'summary.latestLog',
+  inboundCount: 'summary.inboundCount',
+  outboundCount: 'summary.outboundCount',
+  routeRuleCount: 'summary.routeRuleCount',
+  dnsServerCount: 'summary.dnsServerCount',
+  finalOutbound: 'summary.finalOutbound',
+  logLevel: 'summary.logLevel'
+};
+
 export function applyTranslations(root = document) {
   document.documentElement.lang = currentLanguage === 'zh' ? 'zh-CN' : 'en';
   root.querySelectorAll('[data-i18n]').forEach((element) => {
@@ -534,7 +643,7 @@ function readStoredLanguage() {
     const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
     if (SUPPORTED_LANGUAGES.includes(stored)) return stored;
   } catch {}
-  return navigator.language?.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  return 'zh';
 }
 
 function setLanguage(language) {
@@ -652,9 +761,11 @@ export function flattenObject(input, prefix = '', output = {}) {
 export function renderKeyValue(container, entries) {
   container.innerHTML = '';
   for (const [key, value] of Object.entries(entries)) {
+    const label = SUMMARY_LABEL_KEYS[key] ? t(SUMMARY_LABEL_KEYS[key]) : key;
+    const displayValue = typeof value === 'boolean' ? t(value ? 'common.yes' : 'common.no') : value;
     const item = document.createElement('div');
     item.className = 'kv-item';
-    item.innerHTML = `<div class="key">${escapeHtml(key)}</div><div class="value">${escapeHtml(String(value))}</div>`;
+    item.innerHTML = `<div class="key">${escapeHtml(label)}</div><div class="value">${escapeHtml(String(displayValue))}</div>`;
     container.appendChild(item);
   }
 }
@@ -780,11 +891,11 @@ export async function loadConfig() {
 // --- Navigation shell ---
 
 const NAV_ITEMS = [
-  { id: 'dashboard', labelKey: 'nav.dashboard', eyebrow: 'Dashboard', icon: 'dashboard', href: '/dashboard.html' },
-  { id: 'kernel', labelKey: 'nav.kernel', eyebrow: 'Kernel', icon: 'kernel', href: '/kernel.html' },
-  { id: 'config', labelKey: 'nav.config', eyebrow: 'Config', icon: 'config', href: '/config.html' },
-  { id: 'logs', labelKey: 'nav.logs', eyebrow: 'Logs', icon: 'logs', href: '/logs.html' },
-  { id: 'nodes', labelKey: 'nav.nodes', eyebrow: 'Nodes', icon: 'nodes', href: '/nodes.html' }
+  { id: 'dashboard', labelKey: 'nav.dashboard', eyebrowKey: 'nav.dashboard', icon: 'dashboard', href: '/dashboard.html' },
+  { id: 'kernel', labelKey: 'nav.kernel', eyebrowKey: 'nav.kernel', icon: 'kernel', href: '/kernel.html' },
+  { id: 'config', labelKey: 'nav.config', eyebrowKey: 'nav.config', icon: 'config', href: '/config.html' },
+  { id: 'logs', labelKey: 'nav.logs', eyebrowKey: 'nav.logs', icon: 'logs', href: '/logs.html' },
+  { id: 'nodes', labelKey: 'nav.nodes', eyebrowKey: 'nav.nodes', icon: 'nodes', href: '/nodes.html' }
 ];
 
 const ICONS = {
@@ -802,7 +913,7 @@ function renderNavLinks(activePage, variant) {
       <span class="${variant}-icon">${ICONS[item.icon]}</span>
       <span class="${variant}-text">
         <span class="${variant}-label" data-i18n="${item.labelKey}">${t(item.labelKey)}</span>
-        ${variant === 'sidebar' ? `<span class="sidebar-eyebrow">${item.eyebrow}</span>` : ''}
+        ${variant === 'sidebar' ? `<span class="sidebar-eyebrow" data-i18n="${item.eyebrowKey}">${t(item.eyebrowKey)}</span>` : ''}
       </span>
     </a>
   `).join('');
@@ -821,7 +932,7 @@ function injectMenuBar(activePage) {
         <span class="brand-logo">S5</span>
         <span class="brand-copy">
           <span class="brand-title">sub2socks5</span>
-          <span class="brand-subtitle">${activeItem.eyebrow}</span>
+          <span class="brand-subtitle" data-i18n="${activeItem.eyebrowKey}">${t(activeItem.eyebrowKey)}</span>
         </span>
       </a>
     </div>

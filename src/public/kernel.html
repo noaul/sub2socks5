@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title data-i18n="pageTitle.kernel">Kernel - sub2socks5</title>
+  <title data-i18n="pageTitle.kernel">内核 - sub2socks5</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -12,24 +12,24 @@
   <aside id="sidebar" class="sidebar"></aside>
   <main class="page-content">
     <div class="page-header">
-      <h1 data-i18n="kernel.title">Kernel Management</h1>
-      <p class="page-subtitle" data-i18n="kernel.subtitle">Detect architecture, select and download sing-box kernel.</p>
+      <h1 data-i18n="kernel.title">内核管理</h1>
+      <p class="page-subtitle" data-i18n="kernel.subtitle">检测系统架构，选择并下载 sing-box 内核。</p>
     </div>
-    <div id="status-bar" class="status-bar is-idle" role="status" aria-live="polite" data-i18n="common.loading">Loading...</div>
+    <div id="status-bar" class="status-bar is-idle" role="status" aria-live="polite" data-i18n="common.loading">正在加载...</div>
 
     <section class="page-section">
       <div class="section-heading">
-        <h2 data-i18n="kernel.architectureVersion">Architecture & Version</h2>
+        <h2 data-i18n="kernel.architectureVersion">架构与版本</h2>
       </div>
       <div class="kernel-controls">
         <div class="kernel-row">
-          <button id="kernel-architecture-detect" type="button" data-i18n="kernel.detectArchitecture">Detect Architecture</button>
-          <button id="kernel-check" type="button" class="secondary-button" data-i18n="kernel.checkInstalled">Check Installed</button>
-          <button id="kernel-check-updates" type="button" class="secondary-button" data-i18n="kernel.checkUpdates">Check Updates</button>
+          <button id="kernel-architecture-detect" type="button" data-i18n="kernel.detectArchitecture">检测架构</button>
+          <button id="kernel-check" type="button" class="secondary-button" data-i18n="kernel.checkInstalled">检查已安装</button>
+          <button id="kernel-check-updates" type="button" class="secondary-button" data-i18n="kernel.checkUpdates">检查更新</button>
         </div>
         <div class="kernel-row">
           <div class="kernel-pickers">
-            <select id="kernel-arch-select" aria-label="Architecture" data-i18n-aria-label="kernel.architecture">
+            <select id="kernel-arch-select" aria-label="架构" data-i18n-aria-label="kernel.architecture">
               <option value="windows-amd64">windows-amd64</option>
               <option value="windows-arm64">windows-arm64</option>
               <option value="linux-amd64">linux-amd64</option>
@@ -37,11 +37,11 @@
               <option value="darwin-amd64">darwin-amd64</option>
               <option value="darwin-arm64">darwin-arm64</option>
             </select>
-            <select id="kernel-version-select" aria-label="Version" data-i18n-aria-label="kernel.version"></select>
+            <select id="kernel-version-select" aria-label="版本" data-i18n-aria-label="kernel.version"></select>
           </div>
           <div class="actions">
-            <button id="kernel-select-version" type="button" data-i18n="kernel.setPlanned">Set as Planned</button>
-            <button id="kernel-download" type="button" data-i18n="kernel.download">Download Kernel</button>
+            <button id="kernel-select-version" type="button" data-i18n="kernel.setPlanned">设为计划版本</button>
+            <button id="kernel-download" type="button" data-i18n="kernel.download">下载内核</button>
           </div>
         </div>
       </div>
@@ -50,9 +50,9 @@
     <div class="cards-grid cards-grid-2">
       <div class="card">
         <div class="card-header">
-          <h2 data-i18n="kernel.architectureInfo">Architecture Info</h2>
+          <h2 data-i18n="kernel.architectureInfo">架构信息</h2>
           <div class="view-switch">
-            <button id="switch-architecture-form" class="switch-button is-active" type="button" data-i18n="common.form">Form</button>
+            <button id="switch-architecture-form" class="switch-button is-active" type="button" data-i18n="common.form">表单</button>
             <button id="switch-architecture-json" class="switch-button" type="button" data-i18n="common.json">JSON</button>
           </div>
         </div>
@@ -66,9 +66,9 @@
 
       <div class="card">
         <div class="card-header">
-          <h2 data-i18n="kernel.kernelStatus">Kernel Status</h2>
+          <h2 data-i18n="kernel.kernelStatus">内核状态</h2>
           <div class="view-switch">
-            <button id="switch-kernel-form" class="switch-button is-active" type="button" data-i18n="common.form">Form</button>
+            <button id="switch-kernel-form" class="switch-button is-active" type="button" data-i18n="common.form">表单</button>
             <button id="switch-kernel-json" class="switch-button" type="button" data-i18n="common.json">JSON</button>
           </div>
         </div>
@@ -83,7 +83,7 @@
 
     <section class="page-section">
       <div class="section-heading">
-        <h2 data-i18n="kernel.releaseList">Release List</h2>
+        <h2 data-i18n="kernel.releaseList">版本列表</h2>
       </div>
       <div id="release-list" class="timeline"></div>
     </section>

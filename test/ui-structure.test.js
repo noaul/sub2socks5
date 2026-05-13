@@ -11,6 +11,7 @@ test('home page redirects to the dashboard entry page', async () => {
 
   assert.match(html, /http-equiv="refresh" content="0;url=\/dashboard\.html"/);
   assert.match(html, /href="\/dashboard\.html"/);
+  assert.doesNotMatch(html, />\s*Dashboard\s*</);
 });
 
 test('status regions announce asynchronous updates accessibly', async () => {
@@ -74,6 +75,53 @@ test('all split pages expose translatable static headings and actions', async ()
       assert.match(html, new RegExp(`data-i18n="${key}"`), `${page} should expose ${key} for translation`);
     }
   }
+});
+
+test('Chinese UI fallback text is Chinese before scripts run', async () => {
+  const forbiddenEnglishFallbacks = [
+    />\s*Dashboard\s*</,
+    />\s*Configuration\s*</,
+    />\s*Kernel Management\s*</,
+    />\s*Logs & Output\s*</,
+    />\s*Node Management\s*</,
+    />\s*Node Editor\s*</,
+    />\s*Setup flow\s*</,
+    />\s*Ready\s*</,
+    />\s*Loading\.\.\.\s*</,
+    />\s*Save Node Config\s*</,
+    />\s*Back to Nodes\s*</,
+    />\s*Import Manual Nodes\s*</,
+    />\s*Current Nodes\s*</,
+    />\s*Raw \/ JSON\s*</,
+    />\s*Custom\s*</
+  ];
+
+  for (const page of ['dashboard.html', 'kernel.html', 'config.html', 'logs.html', 'nodes.html', 'nodes-edit.html']) {
+    const html = await readPublicFile(page);
+    for (const pattern of forbiddenEnglishFallbacks) {
+      assert.doesNotMatch(html, pattern, `${page} should not show ${pattern} in Chinese fallback UI`);
+    }
+  }
+});
+
+test('shared layout translates navigation chrome and summary labels', async () => {
+  const js = await readPublicFile('layout.js');
+
+  assert.match(js, /return 'zh'/);
+  assert.match(js, /eyebrowKey/);
+  assert.match(js, /data-i18n="\$\{item\.eyebrowKey\}"/);
+  assert.match(js, /SUMMARY_LABEL_KEYS/);
+  assert.match(js, /'summary.nodeCount': '节点数量'/);
+  assert.doesNotMatch(js, /eyebrow: 'Dashboard'/);
+});
+
+test('manual node editor dynamic field labels are translatable', async () => {
+  const js = await readPublicFile('nodes-edit.js');
+
+  assert.match(js, /labelKey: 'nodesEdit.field.password'/);
+  assert.match(js, /t\(field\.labelKey\)/);
+  assert.doesNotMatch(js, /label: 'Password'/);
+  assert.doesNotMatch(js, /label: 'Security'/);
 });
 
 test('configuration page explains how to fill every primary setting', async () => {
