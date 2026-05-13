@@ -36,6 +36,11 @@
   - Bootstrap DNS
   - 默认域名解析器单独配置
   - 每个 `SOCKS5` 目标出口绑定各自的 DoH server
+- 支持多页面 Web UI
+  - 仪表盘、内核、配置、日志、节点页面分离
+  - 顶部菜单与侧边菜单统一导航
+- 支持中文 / English 界面切换
+- 配置页为主要字段提供填写说明
 - 支持运行状态与实时日志查看
 - 支持保存配置后自动生成 `sing-box` 配置
 - 支持运行中自动应用新配置
@@ -64,13 +69,27 @@
   - 默认配置与持久化
   - 旧配置兼容迁移
 - `D:\sub2socks5\src\public\index.html`
-  - 主页
-- `D:\sub2socks5\src\public\app.js`
-  - 主页交互逻辑
+  - 入口页，自动跳转到仪表盘
+- `D:\sub2socks5\src\public\layout.js`
+  - 共享菜单、侧边栏、语言切换、API helper 与通用渲染逻辑
+- `D:\sub2socks5\src\public\dashboard.html`
+- `D:\sub2socks5\src\public\dashboard.js`
+  - 仪表盘与启动流程
+- `D:\sub2socks5\src\public\config.html`
+- `D:\sub2socks5\src\public\config.js`
+  - Web UI、DNS、订阅地址和 `SOCKS5` 服务配置
+- `D:\sub2socks5\src\public\kernel.html`
+- `D:\sub2socks5\src\public\kernel.js`
+  - `sing-box` 内核检测、版本选择与下载
+- `D:\sub2socks5\src\public\logs.html`
+- `D:\sub2socks5\src\public\logs.js`
+  - 运行日志与生成配置查看
 - `D:\sub2socks5\src\public\nodes.html`
-  - 节点管理页
 - `D:\sub2socks5\src\public\nodes.js`
-  - 节点管理逻辑
+  - 节点组、链式代理和测速管理
+- `D:\sub2socks5\src\public\nodes-edit.html`
+- `D:\sub2socks5\src\public\nodes-edit.js`
+  - 手动节点导入、启用和删除
 - `D:\sub2socks5\src\public\style.css`
   - 页面样式
 
@@ -142,50 +161,71 @@
 
 ## Web UI 页面
 
-### 首页
+### 仪表盘
+
+支持：
+
+- 展示内核、订阅、运行状态、`SOCKS5` 服务和生成配置摘要
+- 按流程跳转到内核、节点、配置和启动操作
+- 刷新订阅
+- 启动 / 停止 `sing-box`
+- 显示 VPS 暴露代理端口的安全提醒
+
+### 内核页
 
 支持：
 
 - 检测当前架构
-- 检查内核版本
+- 检查已安装内核
 - 检查版本更新
 - 设置计划版本
-- 拉取 `sing-box` 内核
-- 保存基础配置
-- 更新订阅
-- 启动 / 停止 `sing-box`
-- 配置多个订阅地址
-- 配置多个 `SOCKS5` 服务
-- 配置 DoH 服务器与 Bootstrap DNS 预设
-- 查看状态、生成结果和实时日志
+- 拉取匹配架构的 `sing-box` 内核
 
-首页当前布局：
-
-- 第一行：`Web UI 监听地址`、`Web UI 端口`、`sing-box 二进制路径`、`日志级别`
-- 第二行：`DNS 策略`、`DOH 服务器`、`DoH 引导解析 DNS`
-- 第三行：`默认路由出口`、`自动启动`
-
-运行状态区域：
-
-- `状态`：显示运行摘要
-- `日志`：显示 `sing-box` 实时日志
-
-### 节点管理页
+### 配置页
 
 支持：
 
-- 导入手动节点
-- 查看 / 删除手动节点
+- 保存 Web UI 监听地址、端口、`sing-box` 二进制路径、日志级别和自动启动
+- 配置 DoH 服务器与 Bootstrap DNS 预设
+- 配置默认路由出口
+- 配置多个订阅地址
+- 配置多个本地 `SOCKS5` 服务
+- 在表单视图与 JSON 视图之间切换
+- 为每个主要字段显示填写说明
+
+### 日志页
+
+支持：
+
+- 查看 `sing-box` 实时运行日志
+- 查看生成后的 `sing-box` 配置
+- 在摘要视图与 JSON / 原始视图之间切换
+
+### 节点页
+
+支持：
+
 - 添加节点组
 - 为节点组设置策略与测试参数
 - 按行添加节点组成员
 - 查看 `fallback` 当前活跃节点状态
-- 现有节点以卡片形式展示
-  - 第一行显示节点名称
-  - 第二行显示协议和来源标签
+- 添加链式代理
+- 查看订阅节点、手动节点、节点组和链式代理
+- 批量刷新节点测速
 - 节点组使用可展开卡片展示
   - 折叠态显示组名、策略、成员数量
   - 展开后显示组内节点与编辑项
+
+### 节点编辑页
+
+支持：
+
+- 通过表单添加常见协议节点
+- 导入单行节点链接、多行节点文本或结构化 JSON
+- 查看 / 删除手动节点
+- 禁用 / 重新启用订阅节点
+
+所有业务页面都使用共享菜单栏和侧边菜单，并支持中文 / English 切换。
 
 ## 手动导入节点格式
 

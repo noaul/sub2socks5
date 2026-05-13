@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
@@ -12,6 +12,15 @@ test('home page redirects to the dashboard entry page', async () => {
   assert.match(html, /http-equiv="refresh" content="0;url=\/dashboard\.html"/);
   assert.match(html, /href="\/dashboard\.html"/);
   assert.doesNotMatch(html, />\s*Dashboard\s*</);
+});
+
+test('legacy single-page app bundle is not shipped or documented', async () => {
+  const legacyApp = new URL('../src/public/app.js', import.meta.url);
+  const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8');
+
+  await assert.rejects(access(legacyApp), { code: 'ENOENT' });
+  assert.doesNotMatch(readme, /src\\public\\app\.js/);
+  assert.doesNotMatch(readme, /主页交互逻辑/);
 });
 
 test('status regions announce asynchronous updates accessibly', async () => {
