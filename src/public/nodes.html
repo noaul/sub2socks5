@@ -8,15 +8,25 @@
 </head>
 <body>
   <main class="container">
+    <header class="app-header">
+      <div>
+        <h1>节点管理</h1>
+        <p class="page-subtitle">先导入节点，再组装策略；保存后首页会自动同步可用出口。</p>
+      </div>
+      <div class="header-actions">
+        <button id="back-home" type="button" class="secondary-button">返回主页</button>
+        <button id="save-nodes" type="button">保存节点配置</button>
+      </div>
+    </header>
+
     <section>
       <div class="section-heading">
-        <h1>节点管理</h1>
-        <div class="section-heading-actions">
-          <button id="back-home" type="button">返回主页</button>
-          <button id="save-nodes" type="button">保存节点配置</button>
+        <div>
+          <h2>工作区</h2>
+          <p class="section-subtitle">节点组适合自动测速或故障转移；链式代理适合多跳转发。</p>
         </div>
       </div>
-      <div id="node-status" class="status-bar is-idle">准备就绪</div>
+      <div id="node-status" class="status-bar is-idle" role="status" aria-live="polite">准备就绪</div>
     </section>
 
     <section>
@@ -49,8 +59,8 @@
       <div class="section-heading">
         <h2>现有节点</h2>
         <div class="section-heading-actions">
-          <button id="check-all-nodes" type="button" class="icon-button" title="刷新所有节点测速">↻</button>
-          <button id="open-node-editor" type="button">编辑</button>
+          <button id="check-all-nodes" type="button" class="icon-button" title="刷新所有节点测速" aria-label="刷新所有节点测速">↻</button>
+          <button id="open-node-editor" type="button">管理手动节点</button>
         </div>
       </div>
       <div id="available-node-list" class="node-pill-grid"></div>

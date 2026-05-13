@@ -284,6 +284,27 @@ node src/server.js
 http://127.0.0.1:18080
 ```
 
+### Docker Compose 部署到 VPS
+
+```bash
+git clone https://github.com/uovme/sub2socks5.git
+cd sub2socks5
+docker compose up -d --build
+```
+
+默认端口：
+
+- `18080`：Web UI
+- `18081`：默认 SOCKS5 服务端口
+
+默认配置中，SOCKS5 服务监听地址为 `127.0.0.1`，适合本机或隧道访问。如果要让其他设备直接连接 VPS，需要在 Web UI 的“运行配置 -> SOCKS5 服务”中把监听地址改为 `0.0.0.0`，并确保 `docker-compose.yml` 和云防火墙都开放对应端口。
+
+安全建议：
+
+- 不要把无认证 SOCKS5 直接暴露到公网。
+- 更推荐把 SOCKS5 保持为 `127.0.0.1`，再通过 Tailscale、WireGuard 或 SSH 隧道给其他设备使用。
+- 如果必须公网开放 SOCKS5，请在云防火墙中限制来源 IP，只允许自己的设备访问。
+
 ### 2. 获取当前配置
 
 ```powershell

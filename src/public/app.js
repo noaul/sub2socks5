@@ -17,6 +17,9 @@ const switchFormButton = document.getElementById('switch-form');
 const switchJsonButton = document.getElementById('switch-json');
 const tabButtons = [...document.querySelectorAll('.tab-button')];
 const manageNodesButton = document.getElementById('manage-nodes');
+const manageNodesTopButton = document.getElementById('manage-nodes-top');
+const manageNodesSecondaryButton = document.getElementById('manage-nodes-secondary');
+const openLogsTopButton = document.getElementById('open-logs-top');
 const socksServicesEl = document.getElementById('socks-services');
 const addSocksServiceButton = document.getElementById('add-socks-service');
 const subscriptionUrlsEl = document.getElementById('subscription-urls');
@@ -875,6 +878,18 @@ document.getElementById('kernel-download').onclick = async () => {
 
 manageNodesButton?.addEventListener('click', () => {
   window.location.href = '/nodes.html';
+});
+
+manageNodesTopButton?.addEventListener('click', () => {
+  window.location.href = '/nodes.html';
+});
+
+manageNodesSecondaryButton?.addEventListener('click', () => {
+  window.location.href = '/nodes.html';
+});
+
+openLogsTopButton?.addEventListener('click', () => {
+  switchTab('logs');
 });
 
 addSubscriptionUrlButton?.addEventListener('click', () => {

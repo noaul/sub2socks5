@@ -8,15 +8,19 @@
 </head>
 <body>
   <main class="container">
-    <section>
-      <div class="section-heading">
+    <header class="app-header">
+      <div>
         <h1>节点编辑</h1>
-        <div class="section-heading-actions">
-          <button id="back-nodes" type="button">返回节点管理</button>
-          <button id="save-edit-nodes" type="button">保存节点配置</button>
-        </div>
+        <p class="page-subtitle">导入手动节点，或禁用不想出现在策略组里的订阅节点。</p>
       </div>
-      <div id="edit-node-status" class="status-bar is-idle">准备就绪</div>
+      <div class="header-actions">
+        <button id="back-nodes" type="button" class="secondary-button">返回节点管理</button>
+        <button id="save-edit-nodes" type="button">保存节点配置</button>
+      </div>
+    </header>
+
+    <section>
+      <div id="edit-node-status" class="status-bar is-idle" role="status" aria-live="polite">准备就绪</div>
     </section>
 
     <section class="split-layout">

@@ -5,6 +5,7 @@ services:
     restart: unless-stopped
     ports:
       - "18080:18080"
+      - "18081:18081"
     volumes:
       - ./data:/app/src/data
       - ./runtime:/app/src/runtime

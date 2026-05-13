@@ -1,7 +1,10 @@
 import { mkdir, readFile, writeFile, access, readdir, copyFile, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 const isSeaMode = process.env.SUB2SOCKS5_SEA_BOOTSTRAP === '1';
-const srcDir = isSeaMode ? path.dirname(process.execPath) : process.cwd();
+const sourceSrcDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const srcDir = isSeaMode ? path.dirname(process.execPath) : sourceSrcDir;
 const runtimeBaseDir = isSeaMode ? path.dirname(process.execPath) : srcDir;
 
 export const dataDir = path.join(runtimeBaseDir, 'data');
