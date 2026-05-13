@@ -1,3 +1,6 @@
+import { initLayout, LANGUAGE_CHANGE_EVENT, t, format } from './layout.js';
+initLayout('nodes');
+
 const statusEl = document.getElementById('edit-node-status');
 const inputEl = document.getElementById('edit-manual-node-input');
 const importResultEl = document.getElementById('edit-manual-import-result');
@@ -55,7 +58,7 @@ async function load() {
   const response = await fetch('/api/nodes');
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data?.error?.message || '加载节点失败');
+    throw new Error(data?.error?.message || t('nodesEdit.loadFailed'));
   }
   state = data;
   render();
@@ -110,7 +113,7 @@ function renderNodeList() {
     ...state.manualNodes.map((node) => ({ ...node, source: 'manual' }))
   ];
   if (!nodes.length) {
-    nodeListEl.innerHTML = '<div class="timeline-item"><div class="title">暂无节点</div></div>';
+    nodeListEl.innerHTML = `<div class="timeline-item"><div class="title">${escapeHtml(t('common.noNodes'))}</div></div>`;
     return;
   }
 
@@ -133,7 +136,7 @@ function renderNodeList() {
     const actionText = node.source === 'manual'
       ? '🗑'
       : isDisabled
-        ? '启用'
+        ? t('common.enable')
         : '🗑';
     const titleClass = isDisabled ? 'node-pill-title is-disabled' : 'node-pill-title';
     card.innerHTML = `
@@ -141,10 +144,10 @@ function renderNodeList() {
         <div class="${titleClass}">${escapeHtml(node.tag || '')}</div>
         <div class="node-pill-tags">
           <span class="node-pill-tag">${escapeHtml(node.type || '')}</span>
-          <span class="node-pill-tag is-source">${node.source === 'manual' ? '手动' : '订阅'}</span>
+          <span class="node-pill-tag is-source">${escapeHtml(node.source === 'manual' ? t('common.manual') : t('common.subscription'))}</span>
         </div>
       </div>
-      <button type="button" class="${actionClass}" ${actionAttr} title="${node.source === 'manual' ? '删除节点' : (isDisabled ? '启用节点' : '禁用节点')}">${actionText}</button>
+      <button type="button" class="${actionClass}" ${actionAttr} title="${escapeHtmlAttr(node.source === 'manual' ? t('nodesEdit.deleteNode') : (isDisabled ? t('nodesEdit.enableNode') : t('nodesEdit.disableNode')))}">${escapeHtml(actionText)}</button>
     `;
     nodeListEl.appendChild(card);
   }
@@ -159,12 +162,12 @@ function renderImportResult(result) {
   const warnings = Array.isArray(result.warnings) ? result.warnings : [];
   const items = [];
   if (result.nodes?.length) {
-    items.push(`<div class="timeline-item"><div class="title">成功解析 ${result.nodes.length} 个节点</div></div>`);
+    items.push(`<div class="timeline-item"><div class="title">${escapeHtml(format('nodesEdit.parseSuccess', { count: result.nodes.length }))}</div></div>`);
   }
   for (const warning of warnings) {
-    items.push(`<div class="timeline-item"><div class="title">提示</div><div class="details">${escapeHtml(warning)}</div></div>`);
+    items.push(`<div class="timeline-item"><div class="title">${escapeHtml(t('nodesEdit.notice'))}</div><div class="details">${escapeHtml(warning)}</div></div>`);
   }
-  importResultEl.innerHTML = items.join('') || '<div class="timeline-item"><div class="title">没有可导入节点</div></div>';
+  importResultEl.innerHTML = items.join('') || `<div class="timeline-item"><div class="title">${escapeHtml(t('nodesEdit.noImportableNodes'))}</div></div>`;
 }
 
 function buildFormNode() {
@@ -192,15 +195,22 @@ function buildFormNode() {
   }
 
   if (!node.tag || !node.server || !node.server_port) {
-    throw new Error('表单节点至少需要名称、服务器和端口');
+    throw new Error(t('nodesEdit.requiredFields'));
   }
 
   return node;
 }
 
-function setStatus(message, kind = 'idle') {
+function setStatus(message, kind = 'idle', i18nKey = null, replacements = {}) {
   statusEl.textContent = message;
   statusEl.className = `status-bar is-${kind}`;
+  if (i18nKey) {
+    statusEl.dataset.statusI18n = i18nKey;
+    statusEl.dataset.statusI18nArgs = JSON.stringify(replacements);
+  } else {
+    delete statusEl.dataset.statusI18n;
+    delete statusEl.dataset.statusI18nArgs;
+  }
 }
 
 function escapeHtml(value) {
@@ -216,9 +226,6 @@ function escapeHtmlAttr(value) {
   return escapeHtml(value);
 }
 
-document.getElementById('back-nodes').addEventListener('click', () => {
-  window.location.href = '/nodes.html';
-});
 
 document.getElementById('node-import-tab-form').addEventListener('click', () => setTab('form'));
 document.getElementById('node-import-tab-raw').addEventListener('click', () => setTab('raw'));
@@ -229,7 +236,7 @@ document.getElementById('add-manual-form-node').addEventListener('click', () => 
     const node = buildFormNode();
     state.manualNodes.push(node);
     renderNodeList();
-    setStatus(`已添加表单节点 ${node.tag}，请记得保存`, 'success');
+    setStatus(format('nodesEdit.addedManual', { tag: node.tag }), 'success', 'nodesEdit.addedManual', { tag: node.tag });
   } catch (error) {
     setStatus(error.message, 'error');
   }
@@ -244,13 +251,13 @@ document.getElementById('import-edit-manual-nodes').addEventListener('click', as
     });
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data?.error?.message || '导入失败');
+      throw new Error(data?.error?.message || t('nodesEdit.importFailed'));
     }
     state.manualNodes.push(...(data.nodes || []));
     inputEl.value = '';
     renderImportResult(data);
     renderNodeList();
-    setStatus(`成功导入 ${data.nodes?.length || 0} 个节点`, 'success');
+    setStatus(format('nodesEdit.importSuccess', { count: data.nodes?.length || 0 }), 'success', 'nodesEdit.importSuccess', { count: data.nodes?.length || 0 });
   } catch (error) {
     setStatus(error.message, 'error');
   }
@@ -269,10 +276,10 @@ document.getElementById('save-edit-nodes').addEventListener('click', async () =>
     });
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data?.error?.message || '保存失败');
+      throw new Error(data?.error?.message || t('nodesEdit.saveFailed'));
     }
     localStorage.setItem(NODES_UPDATED_KEY, String(Date.now()));
-    setStatus('节点配置已保存', 'success');
+    setStatus(t('nodesEdit.saved'), 'success', 'nodesEdit.saved');
     await load();
   } catch (error) {
     setStatus(error.message, 'error');
@@ -286,7 +293,7 @@ document.addEventListener('click', (event) => {
   if (target.dataset.deleteManualNode) {
     state.manualNodes = state.manualNodes.filter((node) => node.tag !== target.dataset.deleteManualNode);
     renderNodeList();
-    setStatus('已移除手动节点，请记得保存', 'idle');
+    setStatus(t('nodesEdit.removedManual'), 'idle', 'nodesEdit.removedManual');
   }
 
   if (target.dataset.deleteSubscriptionNode) {
@@ -294,14 +301,16 @@ document.addEventListener('click', (event) => {
       state.disabledSubscriptionTags.push(target.dataset.deleteSubscriptionNode);
     }
     renderNodeList();
-    setStatus('已禁用订阅节点，请记得保存', 'idle');
+    setStatus(t('nodesEdit.disabledSubscription'), 'idle', 'nodesEdit.disabledSubscription');
   }
 
   if (target.dataset.enableSubscriptionNode) {
     state.disabledSubscriptionTags = state.disabledSubscriptionTags.filter((tag) => tag !== target.dataset.enableSubscriptionNode);
     renderNodeList();
-    setStatus('已重新启用订阅节点，请记得保存', 'success');
+    setStatus(t('nodesEdit.enabledSubscription'), 'success', 'nodesEdit.enabledSubscription');
   }
 });
+
+window.addEventListener(LANGUAGE_CHANGE_EVENT, render);
 
 load().catch((error) => setStatus(error.message, 'error'));

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="pageTitle.dashboard">Dashboard - sub2socks5</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header id="menu-bar" class="menu-bar"></header>
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+  <aside id="sidebar" class="sidebar"></aside>
+  <main class="page-content">
+    <div class="page-header">
+      <div>
+        <h1 data-i18n="dashboard.title">仪表盘</h1>
+        <p class="page-subtitle" data-i18n="dashboard.subtitle">按顺序完成内核、节点、SOCKS5 和运行状态；每一项都在独立页面里维护。</p>
+      </div>
+      <div class="page-actions">
+        <button id="start" type="button" data-i18n="dashboard.start">启动服务</button>
+        <button id="stop" type="button" data-i18n="dashboard.stop">停止服务</button>
+        <button id="refresh-sub" type="button" class="secondary-button" data-i18n="dashboard.refreshSubscription">刷新订阅</button>
+      </div>
+    </div>
+    <div id="status-bar" class="status-bar is-idle" role="status" aria-live="polite" data-i18n="common.loading">正在加载...</div>
+
+    <section class="dashboard-hero">
+      <div class="dashboard-hero-main">
+        <p class="eyebrow" data-i18n="dashboard.flowEyebrow">Setup flow</p>
+        <h2 data-i18n="dashboard.flowTitle">从订阅到 SOCKS5 服务</h2>
+        <p data-i18n="dashboard.flowText">先确认 sing-box 内核，再导入订阅或手动节点，最后配置监听端口并启动服务。</p>
+      </div>
+      <div class="setup-steps">
+        <a class="setup-step" href="/kernel.html">
+          <span class="step-number">1</span>
+          <h2 data-i18n="dashboard.stepKernelTitle">安装内核</h2>
+          <p data-i18n="dashboard.stepKernelText">检测系统架构，选择并下载可用的 sing-box 版本。</p>
+        </a>
+        <a class="setup-step" href="/nodes.html">
+          <span class="step-number">2</span>
+          <h2 data-i18n="dashboard.stepNodesTitle">导入订阅</h2>
+          <p data-i18n="dashboard.stepNodesText">管理订阅节点、手动节点、节点组和链式代理。</p>
+        </a>
+        <a class="setup-step" href="/config.html">
+          <span class="step-number">3</span>
+          <h2 data-i18n="dashboard.stepConfigTitle">配置 SOCKS5</h2>
+          <p data-i18n="dashboard.stepConfigText">设置监听地址、端口、DNS 和默认出口。</p>
+        </a>
+        <button id="start-from-flow" class="setup-step setup-step-button" type="button">
+          <span class="step-number">4</span>
+          <h2 data-i18n="dashboard.stepStartTitle">启动服务</h2>
+          <p data-i18n="dashboard.stepStartText">生成配置并启动 runtime，之后在日志页检查输出。</p>
+        </button>
+      </div>
+    </section>
+
+    <section class="safety-callout">
+      <h2 data-i18n="dashboard.safetyTitle">VPS 安全提示</h2>
+      <p data-i18n="dashboard.safetyText">不要把无认证 SOCKS5 直接暴露到公网。跨设备使用时，优先通过防火墙限制来源 IP，或只绑定到内网/VPN 地址。</p>
+    </section>
+
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-header">
+          <h2 data-i18n="dashboard.cardArchitecture">系统架构</h2>
+          <span class="card-badge" id="arch-badge">--</span>
+        </div>
+        <div id="architecture-form" class="kv-grid"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 data-i18n="dashboard.cardKernel">内核</h2>
+          <span class="card-badge" id="kernel-badge">--</span>
+        </div>
+        <div id="kernel-form" class="kv-grid"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 data-i18n="dashboard.cardSubscription">订阅</h2>
+          <span class="card-badge" id="sub-badge">--</span>
+        </div>
+        <div id="subscription-form" class="kv-grid"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 data-i18n="dashboard.cardRuntime">运行状态</h2>
+          <span class="card-badge" id="runtime-badge">--</span>
+        </div>
+        <div id="runtime-form" class="kv-grid"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 data-i18n="dashboard.cardSocks">SOCKS5 服务</h2>
+        </div>
+        <div id="socks-summary" class="kv-grid"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 data-i18n="dashboard.cardGenerated">生成配置</h2>
+        </div>
+        <div id="generated-form" class="kv-grid"></div>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="/layout.js"></script>
+  <script type="module" src="/dashboard.js"></script>
+</body>
+</html>

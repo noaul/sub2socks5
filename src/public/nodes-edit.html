@@ -3,66 +3,66 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>节点编辑 - sub2socks5</title>
+  <title data-i18n="pageTitle.nodesEdit">Node Editor - sub2socks5</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <main class="container">
-    <header class="app-header">
-      <div>
-        <h1>节点编辑</h1>
-        <p class="page-subtitle">导入手动节点，或禁用不想出现在策略组里的订阅节点。</p>
+  <header id="menu-bar" class="menu-bar"></header>
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+  <aside id="sidebar" class="sidebar"></aside>
+  <main class="page-content">
+    <div class="page-header">
+      <h1 data-i18n="nodesEdit.title">Node Editor</h1>
+      <div class="page-actions">
+        <a href="/nodes.html" class="secondary-button" style="text-decoration:none;display:inline-flex;align-items:center;min-height:38px;padding:9px 13px;" data-i18n="nodesEdit.back">Back to Nodes</a>
+        <button id="save-edit-nodes" type="button" data-i18n="nodesEdit.save">Save</button>
       </div>
-      <div class="header-actions">
-        <button id="back-nodes" type="button" class="secondary-button">返回节点管理</button>
-        <button id="save-edit-nodes" type="button">保存节点配置</button>
-      </div>
-    </header>
+    </div>
 
-    <section>
-      <div id="edit-node-status" class="status-bar is-idle" role="status" aria-live="polite">准备就绪</div>
+    <section class="page-section">
+      <div id="edit-node-status" class="status-bar is-idle" role="status" aria-live="polite" data-i18n="common.ready">Ready</div>
     </section>
 
-    <section class="split-layout">
+    <section class="page-section split-layout">
       <div class="split-panel">
         <div class="section-heading">
-          <h2>手动导入节点</h2>
+          <h2 data-i18n="nodesEdit.importManual">Import Manual Nodes</h2>
         </div>
 
         <div class="tab-bar">
-          <button id="node-import-tab-form" type="button" class="tab-button is-active">表单</button>
-          <button id="node-import-tab-raw" type="button" class="tab-button">单行/json</button>
+          <button id="node-import-tab-form" type="button" class="tab-button is-active" data-i18n="nodesEdit.form">Form</button>
+          <button id="node-import-tab-raw" type="button" class="tab-button" data-i18n="nodesEdit.rawJson">Raw / JSON</button>
         </div>
 
         <div id="node-import-form-panel" class="tab-panel is-active">
           <div class="form-grid">
             <label>
-              <span>协议</span>
+              <span data-i18n="nodesEdit.protocol">Protocol</span>
               <select id="manual-form-type"></select>
             </label>
             <label>
-              <span>节点名称</span>
+              <span data-i18n="nodesEdit.nodeName">Node Name</span>
               <input id="manual-form-tag" />
             </label>
             <label>
-              <span>服务器地址</span>
+              <span data-i18n="nodesEdit.server">Server</span>
               <input id="manual-form-server" />
             </label>
             <label>
-              <span>端口</span>
+              <span data-i18n="nodesEdit.port">Port</span>
               <input id="manual-form-port" type="number" min="1" max="65535" />
             </label>
           </div>
           <div id="manual-form-fields" class="form-grid" style="margin-top: 12px;"></div>
           <div class="section-heading-actions" style="margin-top: 12px;">
-            <button id="add-manual-form-node" type="button">添加表单节点</button>
+            <button id="add-manual-form-node" type="button" data-i18n="nodesEdit.addNode">Add Node</button>
           </div>
         </div>
 
         <div id="node-import-raw-panel" class="tab-panel is-hidden">
-          <textarea id="edit-manual-node-input" spellcheck="false" placeholder="支持 vless://、vmess://、trojan://、ss://、socks5:// 等单行节点，多行节点文本，或结构化 JSON。"></textarea>
+          <textarea id="edit-manual-node-input" spellcheck="false" placeholder="Supports vless://, vmess://, trojan://, ss://, socks5:// etc." data-i18n-placeholder="nodesEdit.rawPlaceholder"></textarea>
           <div class="section-heading-actions" style="margin-top: 12px;">
-            <button id="import-edit-manual-nodes" type="button">导入为手动节点</button>
+            <button id="import-edit-manual-nodes" type="button" data-i18n="nodesEdit.importNodes">Import Nodes</button>
           </div>
         </div>
 
@@ -71,12 +71,13 @@
 
       <div class="split-panel">
         <div class="section-heading">
-          <h2>当前节点</h2>
+          <h2 data-i18n="nodesEdit.currentNodes">Current Nodes</h2>
         </div>
         <div id="edit-node-list" class="node-edit-list"></div>
       </div>
     </section>
   </main>
+  <script type="module" src="/layout.js"></script>
   <script type="module" src="/nodes-edit.js"></script>
 </body>
 </html>

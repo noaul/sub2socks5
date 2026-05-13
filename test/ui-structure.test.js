@@ -6,8 +6,114 @@ async function readPublicFile(name) {
   return readFile(new URL(`../src/public/${name}`, import.meta.url), 'utf8');
 }
 
-test('home page presents a guided setup flow and VPS safety guidance', async () => {
+test('home page redirects to the dashboard entry page', async () => {
   const html = await readPublicFile('index.html');
+
+  assert.match(html, /http-equiv="refresh" content="0;url=\/dashboard\.html"/);
+  assert.match(html, /href="\/dashboard\.html"/);
+});
+
+test('status regions announce asynchronous updates accessibly', async () => {
+  const dashboard = await readPublicFile('dashboard.html');
+  const nodes = await readPublicFile('nodes.html');
+  const edit = await readPublicFile('nodes-edit.html');
+
+  assert.match(dashboard, /id="status-bar"[^>]*role="status"[^>]*aria-live="polite"/);
+  assert.match(nodes, /id="node-status"[^>]*role="status"[^>]*aria-live="polite"/);
+  assert.match(edit, /id="edit-node-status"[^>]*role="status"[^>]*aria-live="polite"/);
+});
+
+test('primary workflow is split across dedicated pages with shared menu shell', async () => {
+  const pages = ['dashboard.html', 'kernel.html', 'config.html', 'logs.html', 'nodes.html', 'nodes-edit.html'];
+
+  for (const page of pages) {
+    const html = await readPublicFile(page);
+    assert.match(html, /id="menu-bar"/, `${page} should include the shared menu bar`);
+    assert.match(html, /id="sidebar"/, `${page} should include the shared sidebar`);
+    assert.match(html, /class="page-content"/, `${page} should use the page layout`);
+    assert.match(html, /src="\/layout\.js"/, `${page} should load the shared layout module`);
+  }
+});
+
+test('shared layout defines a complete menu for all top-level pages', async () => {
+  const js = await readPublicFile('layout.js');
+
+  assert.match(js, /'nav.primary': '主菜单'/);
+  assert.match(js, /data-i18n-aria-label="nav.primary"/);
+  assert.match(js, /href: '\/dashboard\.html'/);
+  assert.match(js, /href: '\/kernel\.html'/);
+  assert.match(js, /href: '\/config\.html'/);
+  assert.match(js, /href: '\/logs\.html'/);
+  assert.match(js, /href: '\/nodes\.html'/);
+  assert.match(js, /sidebar-link/);
+});
+
+test('shared layout exposes a persistent Chinese and English language switch', async () => {
+  const js = await readPublicFile('layout.js');
+
+  assert.match(js, /LANGUAGE_STORAGE_KEY/);
+  assert.match(js, /id="language-toggle"/);
+  assert.match(js, /data-language-toggle/);
+  assert.match(js, /中文/);
+  assert.match(js, /English/);
+  assert.match(js, /sub2socks5:languagechange/);
+});
+
+test('all split pages expose translatable static headings and actions', async () => {
+  const pageExpectations = {
+    'dashboard.html': ['dashboard.title', 'dashboard.start', 'dashboard.stop', 'dashboard.refreshSubscription', 'dashboard.safetyTitle'],
+    'kernel.html': ['kernel.title', 'kernel.detectArchitecture', 'kernel.download', 'kernel.releaseList'],
+    'logs.html': ['logs.title', 'logs.runtimeLogs', 'logs.generatedConfig'],
+    'nodes.html': ['nodes.title', 'nodes.save', 'nodes.groups', 'nodes.openEditor'],
+    'nodes-edit.html': ['nodesEdit.title', 'nodesEdit.back', 'nodesEdit.importManual', 'nodesEdit.currentNodes']
+  };
+
+  for (const [page, keys] of Object.entries(pageExpectations)) {
+    const html = await readPublicFile(page);
+    for (const key of keys) {
+      assert.match(html, new RegExp(`data-i18n="${key}"`), `${page} should expose ${key} for translation`);
+    }
+  }
+});
+
+test('configuration page explains how to fill every primary setting', async () => {
+  const html = await readPublicFile('config.html');
+  const staticHelpIds = [
+    'help-app-host',
+    'help-app-port',
+    'help-app-binary',
+    'help-app-log-level',
+    'help-app-auto-start',
+    'help-dns-strategy',
+    'help-dns-remote-preset',
+    'help-dns-remote-url',
+    'help-dns-bootstrap-preset',
+    'help-dns-bootstrap',
+    'help-route-final'
+  ];
+
+  for (const id of staticHelpIds) {
+    assert.match(html, new RegExp(`id="${id}"[^>]*class="field-help"`), `${id} should explain the field`);
+  }
+
+  assert.match(html, /data-i18n="config.title"/);
+  assert.match(html, /data-i18n="help.appHost"/);
+  assert.match(html, /data-i18n="help.routeFinal"/);
+});
+
+test('dynamic configuration editors render translatable field help', async () => {
+  const js = await readPublicFile('config.js');
+
+  assert.match(js, /field-help/);
+  assert.match(js, /help.subscriptionUrl/);
+  assert.match(js, /help.socksTag/);
+  assert.match(js, /help.socksListen/);
+  assert.match(js, /help.socksPort/);
+  assert.match(js, /help.socksTarget/);
+});
+
+test('dashboard presents a guided setup flow and VPS safety guidance', async () => {
+  const html = await readPublicFile('dashboard.html');
 
   assert.match(html, /class="setup-steps"/);
   assert.match(html, /安装内核/);
@@ -16,16 +122,6 @@ test('home page presents a guided setup flow and VPS safety guidance', async () 
   assert.match(html, /启动服务/);
   assert.match(html, /VPS 安全提示/);
   assert.match(html, /不要把无认证 SOCKS5 直接暴露到公网/);
-});
-
-test('status regions announce asynchronous updates accessibly', async () => {
-  const home = await readPublicFile('index.html');
-  const nodes = await readPublicFile('nodes.html');
-  const edit = await readPublicFile('nodes-edit.html');
-
-  assert.match(home, /id="status-bar"[^>]*role="status"[^>]*aria-live="polite"/);
-  assert.match(nodes, /id="node-status"[^>]*role="status"[^>]*aria-live="polite"/);
-  assert.match(edit, /id="edit-node-status"[^>]*role="status"[^>]*aria-live="polite"/);
 });
 
 test('node management exposes clear primary actions and accessible icon buttons', async () => {

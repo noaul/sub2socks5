@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="pageTitle.kernel">Kernel - sub2socks5</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header id="menu-bar" class="menu-bar"></header>
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+  <aside id="sidebar" class="sidebar"></aside>
+  <main class="page-content">
+    <div class="page-header">
+      <h1 data-i18n="kernel.title">Kernel Management</h1>
+      <p class="page-subtitle" data-i18n="kernel.subtitle">Detect architecture, select and download sing-box kernel.</p>
+    </div>
+    <div id="status-bar" class="status-bar is-idle" role="status" aria-live="polite" data-i18n="common.loading">Loading...</div>
+
+    <section class="page-section">
+      <div class="section-heading">
+        <h2 data-i18n="kernel.architectureVersion">Architecture & Version</h2>
+      </div>
+      <div class="kernel-controls">
+        <div class="kernel-row">
+          <button id="kernel-architecture-detect" type="button" data-i18n="kernel.detectArchitecture">Detect Architecture</button>
+          <button id="kernel-check" type="button" class="secondary-button" data-i18n="kernel.checkInstalled">Check Installed</button>
+          <button id="kernel-check-updates" type="button" class="secondary-button" data-i18n="kernel.checkUpdates">Check Updates</button>
+        </div>
+        <div class="kernel-row">
+          <div class="kernel-pickers">
+            <select id="kernel-arch-select" aria-label="Architecture" data-i18n-aria-label="kernel.architecture">
+              <option value="windows-amd64">windows-amd64</option>
+              <option value="windows-arm64">windows-arm64</option>
+              <option value="linux-amd64">linux-amd64</option>
+              <option value="linux-arm64">linux-arm64</option>
+              <option value="darwin-amd64">darwin-amd64</option>
+              <option value="darwin-arm64">darwin-arm64</option>
+            </select>
+            <select id="kernel-version-select" aria-label="Version" data-i18n-aria-label="kernel.version"></select>
+          </div>
+          <div class="actions">
+            <button id="kernel-select-version" type="button" data-i18n="kernel.setPlanned">Set as Planned</button>
+            <button id="kernel-download" type="button" data-i18n="kernel.download">Download Kernel</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="cards-grid cards-grid-2">
+      <div class="card">
+        <div class="card-header">
+          <h2 data-i18n="kernel.architectureInfo">Architecture Info</h2>
+          <div class="view-switch">
+            <button id="switch-architecture-form" class="switch-button is-active" type="button" data-i18n="common.form">Form</button>
+            <button id="switch-architecture-json" class="switch-button" type="button" data-i18n="common.json">JSON</button>
+          </div>
+        </div>
+        <div id="architecture-form-view" class="info-view">
+          <div id="architecture-form" class="kv-grid"></div>
+        </div>
+        <div id="architecture-json-view" class="info-view is-hidden">
+          <pre id="architecture-json"></pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 data-i18n="kernel.kernelStatus">Kernel Status</h2>
+          <div class="view-switch">
+            <button id="switch-kernel-form" class="switch-button is-active" type="button" data-i18n="common.form">Form</button>
+            <button id="switch-kernel-json" class="switch-button" type="button" data-i18n="common.json">JSON</button>
+          </div>
+        </div>
+        <div id="kernel-form-view" class="info-view">
+          <div id="kernel-form" class="kv-grid"></div>
+        </div>
+        <div id="kernel-json-view" class="info-view is-hidden">
+          <pre id="kernel-json"></pre>
+        </div>
+      </div>
+    </div>
+
+    <section class="page-section">
+      <div class="section-heading">
+        <h2 data-i18n="kernel.releaseList">Release List</h2>
+      </div>
+      <div id="release-list" class="timeline"></div>
+    </section>
+  </main>
+  <script type="module" src="/layout.js"></script>
+  <script type="module" src="/kernel.js"></script>
+</body>
+</html>

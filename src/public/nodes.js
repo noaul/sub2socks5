@@ -1,3 +1,6 @@
+import { initLayout, LANGUAGE_CHANGE_EVENT, t, format } from './layout.js';
+initLayout('nodes');
+
 const statusEl = document.getElementById('node-status');
 const groupsEl = document.getElementById('groups');
 const chainsEl = document.getElementById('chains');
@@ -33,7 +36,7 @@ async function load() {
   const response = await fetch('/api/nodes');
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data?.error?.message || '加载节点失败');
+    throw new Error(data?.error?.message || t('nodes.loadFailed'));
   }
   state = {
     ...data,
@@ -52,8 +55,12 @@ function render() {
 function renderSectionToggles() {
   groupsSectionBodyEl.classList.toggle('is-hidden', groupsSectionCollapsed);
   chainsSectionBodyEl.classList.toggle('is-hidden', chainsSectionCollapsed);
-  toggleGroupsSectionButton.textContent = groupsSectionCollapsed ? '展开' : '收起';
-  toggleChainsSectionButton.textContent = chainsSectionCollapsed ? '展开' : '收起';
+  const groupsKey = groupsSectionCollapsed ? 'common.expand' : 'common.collapse';
+  const chainsKey = chainsSectionCollapsed ? 'common.expand' : 'common.collapse';
+  toggleGroupsSectionButton.textContent = t(groupsKey);
+  toggleChainsSectionButton.textContent = t(chainsKey);
+  toggleGroupsSectionButton.dataset.i18n = groupsKey;
+  toggleChainsSectionButton.dataset.i18n = chainsKey;
 }
 
 function renderAvailableNodes() {
@@ -61,13 +68,13 @@ function renderAvailableNodes() {
   availableNodeListEl.innerHTML = '';
 
   if (!visibleNodes.length) {
-    availableNodeListEl.innerHTML = '<div class="timeline-item"><div class="title">暂无节点</div></div>';
+    availableNodeListEl.innerHTML = `<div class="timeline-item"><div class="title">${escapeHtml(t('common.noNodes'))}</div></div>`;
     return;
   }
 
   for (const node of visibleNodes) {
     const delayState = nodeDelayState[node.tag];
-    const delayText = delayState?.loading ? '测速中...' : delayState?.text || 'check';
+    const delayText = delayState?.loading ? t('common.checking') : delayState?.text || t('common.check');
     const card = document.createElement('div');
     card.className = 'node-pill node-pill-checkable';
     card.innerHTML = `
@@ -78,7 +85,7 @@ function renderAvailableNodes() {
           <span class="node-pill-tag is-source">${escapeHtml(sourceLabel(node.source))}</span>
         </div>
       </div>
-      <button type="button" class="node-check-button ${delayState?.loading ? 'is-loading' : ''}" data-check-node="${escapeHtmlAttr(node.tag)}" title="点击测速">${escapeHtml(delayText)}</button>
+      <button type="button" class="node-check-button ${delayState?.loading ? 'is-loading' : ''}" data-check-node="${escapeHtmlAttr(node.tag)}" title="${escapeHtmlAttr(t('nodes.checkTitle'))}">${escapeHtml(delayText)}</button>
     `;
     availableNodeListEl.appendChild(card);
   }
@@ -87,7 +94,7 @@ function renderAvailableNodes() {
 function renderGroups() {
   groupsEl.innerHTML = '';
   if (!state.groups.length) {
-    groupsEl.innerHTML = '<div class="timeline-item"><div class="title">暂无节点组</div></div>';
+    groupsEl.innerHTML = `<div class="timeline-item"><div class="title">${escapeHtml(t('common.noGroups'))}</div></div>`;
     return;
   }
 
@@ -110,11 +117,11 @@ function buildGroupPanel(index, group, selectableNodes) {
     ? `
       <div class="kv-grid">
         <div class="kv-item">
-          <div class="key">当前活动节点</div>
+          <div class="key">${escapeHtml(t('nodes.currentActive'))}</div>
           <div class="value">${escapeHtml(fallbackState?.current || group.members?.[0] || '')}</div>
         </div>
         <div class="kv-item">
-          <div class="key">最近切换时间</div>
+          <div class="key">${escapeHtml(t('nodes.lastSwitched'))}</div>
           <div class="value">${escapeHtml(fallbackState?.updatedAt || '')}</div>
         </div>
       </div>
@@ -126,41 +133,41 @@ function buildGroupPanel(index, group, selectableNodes) {
   item.innerHTML = `
     <div class="group-panel-header">
       <div>
-        <div class="title">${escapeHtml(group.tag || `节点组 ${index + 1}`)}</div>
+        <div class="title">${escapeHtml(group.tag || format('nodes.groupName', { index: index + 1 }))}</div>
         <div class="node-pill-tags">
           <span class="node-pill-tag">${escapeHtml(group.strategy || 'urltest')}</span>
-          <span class="node-pill-tag is-source">${selectedMembers.length} 个节点</span>
+          <span class="node-pill-tag is-source">${escapeHtml(format('common.nodesCount', { count: selectedMembers.length }))}</span>
         </div>
       </div>
-      <button type="button" class="group-toggle" data-toggle-group="${index}">${expanded ? '收起' : '展开'}</button>
+      <button type="button" class="group-toggle" data-toggle-group="${index}">${expanded ? escapeHtml(t('common.collapse')) : escapeHtml(t('common.expand'))}</button>
     </div>
     <div class="node-pill-grid group-summary">
-      ${summaryCards || '<div class="timeline-item"><div class="title">暂无成员</div></div>'}
+      ${summaryCards || `<div class="timeline-item"><div class="title">${escapeHtml(t('common.noMembers'))}</div></div>`}
     </div>
     <div class="group-panel-body ${expanded ? '' : 'is-hidden'}">
       <div class="form-grid">
         <label><span>tag</span><input data-kind="group" data-index="${index}" data-field="tag" value="${escapeHtmlAttr(group.tag || '')}" /></label>
         <label>
-          <span>策略</span>
+          <span>${escapeHtml(t('nodes.strategy'))}</span>
           <select data-kind="group" data-index="${index}" data-field="strategy">
             <option value="urltest" ${group.strategy === 'urltest' ? 'selected' : ''}>urltest</option>
             <option value="fallback" ${group.strategy === 'fallback' ? 'selected' : ''}>fallback</option>
           </select>
         </label>
         <label>
-          <span>测试地址</span>
+          <span>${escapeHtml(t('nodes.testUrl'))}</span>
           <select data-kind="group-preset" data-index="${index}">
             ${buildGroupUrlPresetOptions(group.url)}
           </select>
         </label>
-        <label><span>测试间隔</span><input data-kind="group" data-index="${index}" data-field="interval" value="${escapeHtmlAttr(group.interval || '10m')}" /></label>
-        <label><span>超时毫秒</span><input data-kind="group" data-index="${index}" data-field="timeoutMs" type="number" value="${escapeHtmlAttr(String(group.timeoutMs || 5000))}" /></label>
-        <label class="${GROUP_TEST_URL_PRESETS.includes(group.url) ? 'is-hidden' : ''}"><span>自定义测试地址</span><input data-kind="group" data-index="${index}" data-field="url" value="${escapeHtmlAttr(group.url || 'https://www.gstatic.com/generate_204')}" /></label>
+        <label><span>${escapeHtml(t('nodes.interval'))}</span><input data-kind="group" data-index="${index}" data-field="interval" value="${escapeHtmlAttr(group.interval || '10m')}" /></label>
+        <label><span>${escapeHtml(t('nodes.timeoutMs'))}</span><input data-kind="group" data-index="${index}" data-field="timeoutMs" type="number" value="${escapeHtmlAttr(String(group.timeoutMs || 5000))}" /></label>
+        <label class="${GROUP_TEST_URL_PRESETS.includes(group.url) ? 'is-hidden' : ''}"><span>${escapeHtml(t('nodes.customTestUrl'))}</span><input data-kind="group" data-index="${index}" data-field="url" value="${escapeHtmlAttr(group.url || 'https://www.gstatic.com/generate_204')}" /></label>
       </div>
       ${statusHtml}
       <div class="member-selector">${renderGroupMembers(index, group, selectableNodes)}</div>
       <div class="section-heading-actions">
-        <button type="button" data-remove-group="${index}">删除</button>
+        <button type="button" data-remove-group="${index}">${escapeHtml(t('common.delete'))}</button>
       </div>
     </div>
   `;
@@ -170,7 +177,7 @@ function buildGroupPanel(index, group, selectableNodes) {
 function renderChains() {
   chainsEl.innerHTML = '';
   if (!state.chains.length) {
-    chainsEl.innerHTML = '<div class="timeline-item"><div class="title">暂无链式代理</div></div>';
+    chainsEl.innerHTML = `<div class="timeline-item"><div class="title">${escapeHtml(t('common.noChains'))}</div></div>`;
     return;
   }
 
@@ -190,22 +197,22 @@ function renderChains() {
     item.innerHTML = `
       <div class="group-panel-header">
         <div>
-          <div class="title">${escapeHtml(chain.tag || `链式代理 ${index + 1}`)}</div>
+          <div class="title">${escapeHtml(chain.tag || format('nodes.chainName', { index: index + 1 }))}</div>
           <div class="node-pill-tags">
             <span class="node-pill-tag">chain</span>
-            <span class="node-pill-tag is-source">${selectedMembers.length} 个节点</span>
+            <span class="node-pill-tag is-source">${escapeHtml(format('common.nodesCount', { count: selectedMembers.length }))}</span>
           </div>
         </div>
-        <button type="button" class="group-toggle" data-toggle-chain="${index}">${expanded ? '收起' : '展开'}</button>
+        <button type="button" class="group-toggle" data-toggle-chain="${index}">${expanded ? escapeHtml(t('common.collapse')) : escapeHtml(t('common.expand'))}</button>
       </div>
-      <div class="chain-summary">${chainCards || '<div class="timeline-item"><div class="title">暂无成员</div></div>'}</div>
+      <div class="chain-summary">${chainCards || `<div class="timeline-item"><div class="title">${escapeHtml(t('common.noMembers'))}</div></div>`}</div>
       <div class="group-panel-body ${expanded ? '' : 'is-hidden'}">
         <div class="form-grid">
-          <label><span>名称</span><input data-kind="chain" data-index="${index}" data-field="tag" value="${escapeHtmlAttr(chain.tag || '')}" /></label>
+          <label><span>${escapeHtml(t('nodes.name'))}</span><input data-kind="chain" data-index="${index}" data-field="tag" value="${escapeHtmlAttr(chain.tag || '')}" /></label>
         </div>
         <div class="member-selector">${renderChainMembers(index, chain, selectableNodes)}</div>
         <div class="section-heading-actions">
-          <button type="button" data-remove-chain="${index}">删除</button>
+          <button type="button" data-remove-chain="${index}">${escapeHtml(t('common.delete'))}</button>
         </div>
       </div>
     `;
@@ -220,11 +227,11 @@ function renderGroupMembers(index, group, selectableNodes) {
       <select data-group-member-select="${index}" data-member-index="${memberIndex}">
         ${buildMemberOptions(selectableNodes, selected, memberTag)}
       </select>
-      <button type="button" class="member-remove" data-remove-member="${index}" data-member-index="${memberIndex}">删除</button>
+      <button type="button" class="member-remove" data-remove-member="${index}" data-member-index="${memberIndex}">${escapeHtml(t('common.delete'))}</button>
     </div>
   `);
   const remaining = selectableNodes.filter((node) => !selected.includes(node.tag));
-  rows.push(`<button type="button" class="member-add" data-add-member="${index}" ${remaining.length ? '' : 'disabled'}>+ 添加节点</button>`);
+  rows.push(`<button type="button" class="member-add" data-add-member="${index}" ${remaining.length ? '' : 'disabled'}>${escapeHtml(t('nodes.addNode'))}</button>`);
   return rows.join('');
 }
 
@@ -235,11 +242,11 @@ function renderChainMembers(index, chain, selectableNodes) {
       <select data-chain-member-select="${index}" data-member-index="${memberIndex}">
         ${buildMemberOptions(selectableNodes, selected, memberTag)}
       </select>
-      <button type="button" class="member-remove" data-remove-chain-member="${index}" data-member-index="${memberIndex}">删除</button>
+      <button type="button" class="member-remove" data-remove-chain-member="${index}" data-member-index="${memberIndex}">${escapeHtml(t('common.delete'))}</button>
     </div>
   `);
   const remaining = selectableNodes.filter((node) => !selected.includes(node.tag));
-  rows.push(`<button type="button" class="member-add" data-add-chain-member="${index}" ${remaining.length ? '' : 'disabled'}>+ 添加节点</button>`);
+  rows.push(`<button type="button" class="member-add" data-add-chain-member="${index}" ${remaining.length ? '' : 'disabled'}>${escapeHtml(t('nodes.addNode'))}</button>`);
   return rows.join('');
 }
 
@@ -254,7 +261,7 @@ function buildGroupUrlPresetOptions(currentUrl) {
   const preset = GROUP_TEST_URL_PRESETS.includes(currentUrl) ? currentUrl : 'custom';
   return [
     ...GROUP_TEST_URL_PRESETS.map((url) => `<option value="${escapeHtmlAttr(url)}" ${preset === url ? 'selected' : ''}>${escapeHtml(url)}</option>`),
-    `<option value="custom" ${preset === 'custom' ? 'selected' : ''}>自定义</option>`
+    `<option value="custom" ${preset === 'custom' ? 'selected' : ''}>${escapeHtml(t('common.custom'))}</option>`
   ].join('');
 }
 
@@ -279,16 +286,16 @@ function renderNodePill(node) {
 }
 
 function sourceLabel(source) {
-  if (source === 'subscription') return '订阅';
-  if (source === 'manual') return '手动';
-  if (source === 'group') return '节点组';
-  if (source === 'chain') return '链式代理';
-  if (source === 'builtin') return '内置';
+  if (source === 'subscription') return t('common.subscription');
+  if (source === 'manual') return t('common.manual');
+  if (source === 'group') return t('common.group');
+  if (source === 'chain') return t('common.chain');
+  if (source === 'builtin') return t('common.builtin');
   return source || '';
 }
 
 async function checkNode(tag) {
-  nodeDelayState[tag] = { loading: true, text: '测速中...' };
+  nodeDelayState[tag] = { loading: true, text: t('common.checking') };
   renderAvailableNodes();
   try {
     const response = await fetch('/api/nodes/check', {
@@ -298,7 +305,7 @@ async function checkNode(tag) {
     });
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data?.error?.message || '测速失败');
+      throw new Error(data?.error?.message || t('nodes.checkFailed'));
     }
     nodeDelayState[tag] = data.results?.[tag]?.ok
       ? {
@@ -306,10 +313,10 @@ async function checkNode(tag) {
           checkedAt: data.results[tag].checkedAt,
           checkedTag: data.results[tag].checkedTag
         }
-      : { text: '失败', error: data.results?.[tag]?.error || '测速失败' };
-    setStatus(`节点 ${tag} 测速完成`, 'success');
+      : { text: t('common.failed'), error: data.results?.[tag]?.error || t('nodes.checkFailed') };
+    setStatus(format('nodes.checkNodeDone', { tag }), 'success', 'nodes.checkNodeDone', { tag });
   } catch (error) {
-    nodeDelayState[tag] = { text: '失败', error: error.message };
+    nodeDelayState[tag] = { text: t('common.failed'), error: error.message };
     setStatus(error.message, 'error');
   }
   renderAvailableNodes();
@@ -318,15 +325,15 @@ async function checkNode(tag) {
 async function checkAllNodes() {
   const tags = getSelectableNodes().map((item) => item.tag);
   if (!tags.length) {
-    setStatus('当前没有可测速节点', 'idle');
+    setStatus(t('nodes.noCheckableNodes'), 'idle', 'nodes.noCheckableNodes');
     return;
   }
 
-  setStatus('正在分批刷新全部节点测速...', 'loading');
+  setStatus(t('nodes.checkAllProgress'), 'loading', 'nodes.checkAllProgress');
   for (let index = 0; index < tags.length; index += CHECK_BATCH_SIZE) {
     const batch = tags.slice(index, index + CHECK_BATCH_SIZE);
     for (const tag of batch) {
-      nodeDelayState[tag] = { loading: true, text: '测速中...' };
+      nodeDelayState[tag] = { loading: true, text: t('common.checking') };
     }
     renderAvailableNodes();
 
@@ -338,18 +345,18 @@ async function checkAllNodes() {
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data?.error?.message || '批量测速失败');
+        throw new Error(data?.error?.message || t('nodes.batchCheckFailed'));
       }
       for (const tag of batch) {
         const result = data.results?.[tag];
         nodeDelayState[tag] = result?.ok
           ? { text: result.text, checkedAt: result.checkedAt, checkedTag: result.checkedTag }
-          : { text: '失败', error: result?.error || '测速失败' };
+          : { text: t('common.failed'), error: result?.error || t('nodes.checkFailed') };
       }
       renderAvailableNodes();
     } catch (error) {
       for (const tag of batch) {
-        nodeDelayState[tag] = { text: '失败', error: error.message };
+        nodeDelayState[tag] = { text: t('common.failed'), error: error.message };
       }
       renderAvailableNodes();
       setStatus(error.message, 'error');
@@ -357,12 +364,19 @@ async function checkAllNodes() {
     }
   }
 
-  setStatus('全部节点测速完成', 'success');
+  setStatus(t('nodes.checkAllDone'), 'success', 'nodes.checkAllDone');
 }
 
-function setStatus(message, kind = 'idle') {
+function setStatus(message, kind = 'idle', i18nKey = null, replacements = {}) {
   statusEl.textContent = message;
   statusEl.className = `status-bar is-${kind}`;
+  if (i18nKey) {
+    statusEl.dataset.statusI18n = i18nKey;
+    statusEl.dataset.statusI18nArgs = JSON.stringify(replacements);
+  } else {
+    delete statusEl.dataset.statusI18n;
+    delete statusEl.dataset.statusI18nArgs;
+  }
 }
 
 function escapeHtml(value) {
@@ -378,9 +392,6 @@ function escapeHtmlAttr(value) {
   return escapeHtml(value);
 }
 
-document.getElementById('back-home').addEventListener('click', () => {
-  window.location.href = '/';
-});
 
 document.getElementById('open-node-editor').addEventListener('click', () => {
   window.location.href = '/nodes-edit.html';
@@ -426,10 +437,10 @@ document.getElementById('save-nodes').addEventListener('click', async () => {
     });
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data?.error?.message || '保存失败');
+      throw new Error(data?.error?.message || t('nodes.saveFailed'));
     }
     localStorage.setItem(NODES_UPDATED_KEY, String(Date.now()));
-    setStatus('节点配置已保存', 'success');
+    setStatus(t('nodes.saved'), 'success', 'nodes.saved');
     await load();
   } catch (error) {
     setStatus(error.message, 'error');
@@ -543,5 +554,7 @@ document.addEventListener('click', (event) => {
     checkNode(target.dataset.checkNode).catch((error) => setStatus(error.message, 'error'));
   }
 });
+
+window.addEventListener(LANGUAGE_CHANGE_EVENT, render);
 
 load().catch((error) => setStatus(error.message, 'error'));

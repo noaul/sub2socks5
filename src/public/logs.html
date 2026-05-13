@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="pageTitle.logs">Logs - sub2socks5</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header id="menu-bar" class="menu-bar"></header>
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+  <aside id="sidebar" class="sidebar"></aside>
+  <main class="page-content">
+    <div class="page-header">
+      <h1 data-i18n="logs.title">Logs & Output</h1>
+      <p class="page-subtitle" data-i18n="logs.subtitle">Real-time runtime logs and generated sing-box configuration.</p>
+    </div>
+    <div id="status-bar" class="status-bar is-idle" role="status" aria-live="polite" data-i18n="common.loading">Loading...</div>
+
+    <section class="page-section">
+      <div class="section-heading">
+        <h2 data-i18n="logs.runtimeLogs">Runtime Logs</h2>
+        <div class="view-switch">
+          <button id="switch-logs-form" class="switch-button is-active" type="button" data-i18n="common.timeline">Timeline</button>
+          <button id="switch-logs-json" class="switch-button" type="button" data-i18n="common.raw">Raw</button>
+        </div>
+      </div>
+      <div id="logs-form-view" class="info-view">
+        <div id="logs-form" class="timeline"></div>
+      </div>
+      <div id="logs-json-view" class="info-view is-hidden">
+        <pre id="logs-json"></pre>
+      </div>
+    </section>
+
+    <section class="page-section">
+      <div class="section-heading">
+        <h2 data-i18n="logs.generatedConfig">Generated sing-box Config</h2>
+        <div class="view-switch">
+          <button id="switch-generated-form" class="switch-button is-active" type="button" data-i18n="common.summary">Summary</button>
+          <button id="switch-generated-json" class="switch-button" type="button" data-i18n="common.json">JSON</button>
+        </div>
+      </div>
+      <div id="generated-form-view" class="info-view">
+        <div id="generated-form" class="kv-grid"></div>
+      </div>
+      <div id="generated-json-view" class="info-view is-hidden">
+        <pre id="generated-json"></pre>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/layout.js"></script>
+  <script type="module" src="/logs.js"></script>
+</body>
+</html>
