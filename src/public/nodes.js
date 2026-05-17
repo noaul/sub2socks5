@@ -1,4 +1,4 @@
-import { initLayout, LANGUAGE_CHANGE_EVENT, t, format } from './layout.js';
+import { initLayout, LANGUAGE_CHANGE_EVENT, NODES_UPDATED_KEY, t, format, escapeHtml, escapeHtmlAttr } from './layout.js';
 initLayout('nodes');
 
 const statusEl = document.getElementById('node-status');
@@ -9,7 +9,6 @@ const groupsSectionBodyEl = document.getElementById('groups-section-body');
 const chainsSectionBodyEl = document.getElementById('chains-section-body');
 const toggleGroupsSectionButton = document.getElementById('toggle-groups-section');
 const toggleChainsSectionButton = document.getElementById('toggle-chains-section');
-const NODES_UPDATED_KEY = 'sub2socks5:nodes-updated-at';
 const GROUP_TEST_URL_PRESETS = [
   'https://www.gstatic.com/generate_204',
   'https://www.google.com/generate_204',
@@ -377,19 +376,6 @@ function setStatus(message, kind = 'idle', i18nKey = null, replacements = {}) {
     delete statusEl.dataset.statusI18n;
     delete statusEl.dataset.statusI18nArgs;
   }
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-function escapeHtmlAttr(value) {
-  return escapeHtml(value);
 }
 
 

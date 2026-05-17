@@ -1,4 +1,4 @@
-import { initLayout, LANGUAGE_CHANGE_EVENT, t, format } from './layout.js';
+import { initLayout, LANGUAGE_CHANGE_EVENT, NODES_UPDATED_KEY, t, format, escapeHtml, escapeHtmlAttr } from './layout.js';
 initLayout('nodes');
 
 const statusEl = document.getElementById('edit-node-status');
@@ -10,7 +10,6 @@ const formTagEl = document.getElementById('manual-form-tag');
 const formServerEl = document.getElementById('manual-form-server');
 const formPortEl = document.getElementById('manual-form-port');
 const formFieldsEl = document.getElementById('manual-form-fields');
-const NODES_UPDATED_KEY = 'sub2socks5:nodes-updated-at';
 
 const FORM_PROTOCOLS = {
   vless: [
@@ -211,19 +210,6 @@ function setStatus(message, kind = 'idle', i18nKey = null, replacements = {}) {
     delete statusEl.dataset.statusI18n;
     delete statusEl.dataset.statusI18nArgs;
   }
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-function escapeHtmlAttr(value) {
-  return escapeHtml(value);
 }
 
 

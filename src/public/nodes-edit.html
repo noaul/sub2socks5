@@ -14,7 +14,7 @@
     <div class="page-header">
       <h1 data-i18n="nodesEdit.title">节点编辑</h1>
       <div class="page-actions">
-        <a href="/nodes.html" class="secondary-button" style="text-decoration:none;display:inline-flex;align-items:center;min-height:38px;padding:9px 13px;" data-i18n="nodesEdit.back">返回节点</a>
+        <a href="/nodes.html" class="secondary-button" data-i18n="nodesEdit.back">返回节点</a>
         <button id="save-edit-nodes" type="button" data-i18n="nodesEdit.save">保存</button>
       </div>
     </div>
@@ -53,15 +53,15 @@
               <input id="manual-form-port" type="number" min="1" max="65535" />
             </label>
           </div>
-          <div id="manual-form-fields" class="form-grid" style="margin-top: 12px;"></div>
-          <div class="section-heading-actions" style="margin-top: 12px;">
+          <div id="manual-form-fields" class="form-grid"></div>
+          <div class="section-heading-actions">
             <button id="add-manual-form-node" type="button" data-i18n="nodesEdit.addNode">添加节点</button>
           </div>
         </div>
 
         <div id="node-import-raw-panel" class="tab-panel is-hidden">
           <textarea id="edit-manual-node-input" spellcheck="false" placeholder="Supports vless://, vmess://, trojan://, ss://, socks5:// etc." data-i18n-placeholder="nodesEdit.rawPlaceholder"></textarea>
-          <div class="section-heading-actions" style="margin-top: 12px;">
+          <div class="section-heading-actions">
             <button id="import-edit-manual-nodes" type="button" data-i18n="nodesEdit.importNodes">导入节点</button>
           </div>
         </div>

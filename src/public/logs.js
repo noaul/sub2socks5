@@ -31,8 +31,8 @@ function setInfoView(name, mode) {
 }
 
 async function load() {
-  const data = await loadConfig();
-  render(data);
+  latestLogsData = await loadConfig();
+  render(latestLogsData);
 }
 
 function render(data = latestLogsData) {
@@ -52,15 +52,10 @@ function render(data = latestLogsData) {
 
 let latestLogsData = null;
 
-async function loadAndStore() {
-  latestLogsData = await loadConfig();
-  render(latestLogsData);
-}
-
 window.addEventListener(LANGUAGE_CHANGE_EVENT, () => render(latestLogsData));
 
-loadAndStore().catch((error) => setStatus(format('status.initFailed', { error: error.message }), 'error', 'status.initFailed', { error: error.message }));
+load().catch((error) => setStatus(format('status.initFailed', { error: error.message }), 'error', 'status.initFailed', { error: error.message }));
 
 setInterval(async () => {
-  try { await loadAndStore(); } catch {}
+  try { await load(); } catch {}
 }, 3000);

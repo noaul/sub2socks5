@@ -908,13 +908,11 @@ const ICONS = {
 
 function renderNavLinks(activePage, variant) {
   const linkClass = variant === 'sidebar' ? 'sidebar-link' : 'menu-link';
+  const iconClass = variant === 'sidebar' ? 'sidebar-icon' : 'menu-icon';
   return NAV_ITEMS.map((item) => `
     <a href="${item.href}" class="${linkClass}${item.id === activePage ? ' is-active' : ''}" data-page="${item.id}" aria-current="${item.id === activePage ? 'page' : 'false'}">
-      <span class="${variant}-icon">${ICONS[item.icon]}</span>
-      <span class="${variant}-text">
-        <span class="${variant}-label" data-i18n="${item.labelKey}">${t(item.labelKey)}</span>
-        ${variant === 'sidebar' ? `<span class="sidebar-eyebrow" data-i18n="${item.eyebrowKey}">${t(item.eyebrowKey)}</span>` : ''}
-      </span>
+      <span class="${iconClass}">${ICONS[item.icon]}</span>
+      <span class="${variant}-label" data-i18n="${item.labelKey}">${t(item.labelKey)}</span>
     </a>
   `).join('');
 }
